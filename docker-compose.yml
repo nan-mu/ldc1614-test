@@ -1,0 +1,23 @@
+services:
+  # Update this to the name of the service you want to work with in your docker-compose.yml file
+  dev-container:
+    # 如果你想覆盖服务的 Dockerfile 到 .devcontainer 文件夹中的一个，请取消注释。
+    # 请注意，Dockerfile 和上下文的路径是相对于*主* docker-compose.yml 文件的（即 devcontainer.json
+    # "dockerComposeFile" 数组中的第一个）。下面的示例假设你的主文件在项目的根目录中。
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+
+    volumes:
+      # Update this to wherever you want VS Code to mount the folder of your project
+      - .:/workspaces:cached
+      - ${HOME}/.gitconfig:/root/.gitconfig:ro # 挂载本地 git 配置
+      - ${HOME}/.ssh:/root/.ssh:ro # 挂载本地 SSH 密钥
+
+    # Uncomment the next four lines if you will use a ptrace-based debugger like C++, Go, and Rust.
+    # cap_add:
+    #   - SYS_PTRACE
+    # security_opt:
+    #   - seccomp:unconfined
+
+    command: sleep infinity

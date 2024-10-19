@@ -7,6 +7,12 @@
     "settings": {
         "editor.tabSize": 4,
         "editor.insertSpaces": true,
-        "editor.formatOnSave": true
+        "editor.formatOnSave": true,
+        "github.copilot.advanced": {
+            "debug.overrideProxyUrl": "http://host.docker.internal:7890",
+            "debug.testOverrideProxyUrl": "http://host.docker.internal:7890"
+        },
+        // "http.proxy": "host.docker.internal:7890",
+        // "remote.containers.autoStart": true
     }
 }

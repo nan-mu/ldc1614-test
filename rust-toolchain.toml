@@ -1,0 +1,4 @@
+# rust-toolchain
+[toolchain]
+channel = "stable"
+target = "aarch64-unknown-linux-gnu"

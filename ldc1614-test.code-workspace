@@ -14,5 +14,31 @@
         },
         // "http.proxy": "host.docker.internal:7890",
         // "remote.containers.autoStart": true
+    },
+    "extensions": {
+        "recommendations": [
+            "ms-ceintl.vscode-language-pack-zh-hans",
+            "GitHub.copilot-chat",
+            "GitHub.copilot",
+            "mhutchie.git-graph",
+            "fill-labs.dependi",
+            "ms-azuretools.vscode-docker",
+            "usernamehw.errorlens",
+            "tamasfe.even-better-toml",
+            "discretegames.f5anything",
+            "donjayamanne.githistory",
+            "GitHub.vscode-pull-request-github",
+            "oderwat.indent-rainbow",
+            "antfu.goto-alias",
+            "webfreak.debug",
+            "lorenzopirro.rust-flash-snippets",
+            "ZhangYue.rust-mod-generator",
+            "rust-lang.rust-analyzer",
+            "belfz.search-crates-io",
+            "ms-vscode.vscode-serial-monitor",
+            "evgeniypeshkov.syntax-highlighter",
+            "wayou.vscode-todo-highlight",
+            "Gruntfuggly.todo-tree"
+        ]
     }
 }

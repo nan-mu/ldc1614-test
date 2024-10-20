@@ -19,7 +19,28 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"GitHub.copilot"
+				"GitHub.copilot",
+				"mhutchie.git-graph",
+				"rust-lang.rust-analyzer",
+				"vadimcn.vscode-lldb",
+				"evgeniypeshkov.syntax-highlighter",
+				"ZhangYue.rust-mod-generator",
+				"lorenzopirro.rust-flash-snippets",
+				"ms-azuretools.vscode-docker",
+				"fill-labs.dependi",
+				"tamasfe.even-better-toml",
+				"discretegames.f5anything",
+				"usernamehw.errorlens",
+				"donjayamanne.githistory",
+				"GitHub.vscode-pull-request-github",
+				"GitHub.copilot-chat",
+				"antfu.goto-alias",
+				"oderwat.indent-rainbow",
+				"webfreak.debug",
+				"belfz.search-crates-io",
+				"ms-vscode.vscode-serial-monitor",
+				"wayou.vscode-todo-highlight",
+				"Gruntfuggly.todo-tree"
 			]
 		}
 	}

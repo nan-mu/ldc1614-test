@@ -11,8 +11,8 @@ services:
     volumes:
       # Update this to wherever you want VS Code to mount the folder of your project
       - .:/workspaces:cached
-      - ${HOME}/.gitconfig:/root/.gitconfig:ro # 挂载本地 git 配置
-      - ${HOME}/.ssh:/root/.ssh:ro # 挂载本地 SSH 密钥
+      - ~/.gitconfig:/home/vscode/.gitconfig # 挂载本地 git 配置
+      - ~/.ssh:/home/vscode/.ssh:ro # 挂载本地 SSH 密钥
 
     # Uncomment the next four lines if you will use a ptrace-based debugger like C++, Go, and Rust.
     # cap_add:

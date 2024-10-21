@@ -4,22 +4,43 @@ WORKDIR /workspaces
 
 USER vscode 
 
-RUN sudo apt update && \
+ENV NVM_DIR="/home/vscode/.nvm"
+
+RUN sudo sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources && \
+    sudo apt update && \
     sudo apt install -y \
-        git \
-        gcc-aarch64-linux-gnu && \
-    rustup target add aarch64-unknown-linux-musl
-
-RUN git config --global http.proxy "" && \
-    git config --global https.proxy "" && \
-    git config --global --add safe.directory /workspaces && \
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
-
-RUN export NVM_DIR="$HOME/.nvm" && \
-    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" && \
-    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" && \
+    git \
+    gcc-aarch64-linux-gnu && \
+    if [ "$proxy"x = "none"x ]; then \
+    rustup target add aarch64-unknown-linux-musl && \
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash ; \
+    else \
+    http_proxy=$proxy \
+    https_proxy=$proxy \
+    rustup target add aarch64-unknown-linux-musl && \
+    http_proxy=$proxy \
+    https_proxy=$proxy \
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash ;\
+    fi && \
+    if [ "$proxy"x = "none"x ]; then \
+    bash -c 'source $NVM_DIR/nvm.sh && \
+    nvm alias default 22 && \
     nvm install 22 && \
+    nvm use default && \
+    npm config set registry https://registry.npmmirror.com/ && \
     npm install -g commitizen && \
-    commitizen init cz-conventional-changelog --save-dev --save-exact
+    commitizen init cz-conventional-changelog --save-dev --save-exact' ; \
+    else \
+    http_proxy=$proxy \
+    https_proxy=$proxy \
+    bash -c 'source $NVM_DIR/nvm.sh && \
+    nvm alias default 22 && \
+    nvm install 22 && \
+    nvm use default && \
+    npm config set registry https://registry.npmmirror.com/ && \
+    npm install -g commitizen && \
+    commitizen init cz-conventional-changelog --save-dev --save-exact' ; \
+    fi
 
-RUN git config --global --add safe.directory /workspaces
+ENV NODE_PATH=$NVM_DIR/v22/lib/node_modules
+ENV PATH=$NVM_DIR/v22/bin:$PATH

@@ -9,7 +9,7 @@ ENV NVM_DIR="/home/vscode/.nvm"
 RUN sudo sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources && \
     sudo apt update && \
     sudo apt install -y \
-<<<<<<< HEAD
+    <<<<<<< HEAD
     git \
     gcc-aarch64-linux-gnu && \
     if [ "$proxy"x = "none"x ]; then \
@@ -59,8 +59,5 @@ RUN sudo sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/
 
 ENV NODE_PATH=$NVM_DIR/v22/lib/node_modules
 ENV PATH=$NVM_DIR/v22/bin:$PATH
-<<<<<<< HEAD
-=======
 
 COPY .devcontainer/entrypoint.sh /
->>>>>>> origin/more-docker

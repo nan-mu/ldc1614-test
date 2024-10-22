@@ -22,8 +22,6 @@ dependencies = [
 [[package]]
 name = "ldc1x1x"
 version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1e3a6a4007ba9f17259b51c4bb39c9c992d717d2392ee0968f0451a6d4521b1"
 dependencies = [
  "embedded-hal",
 ]

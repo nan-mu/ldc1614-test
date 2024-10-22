@@ -9,8 +9,15 @@ ENV NVM_DIR="/home/vscode/.nvm"
 RUN sudo sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources && \
     sudo apt update && \
     sudo apt install -y \
-    git \
-    gcc-aarch64-linux-gnu && \
+    build-essential \
+    musl-tools \
+    # bison \
+    # flex \
+    # texinfo \
+    wget \
+    git && \
+    # curl -L https://github.com/lovell/aarch64-linux-musl-crosstools/archive/refs/heads/main.zip -o /opt/main.zip && \
+    # unzip /opt/main.zip -d /opt && \
     if [ "$proxy"x = "none"x ]; then \
     rustup target add aarch64-unknown-linux-musl && \
     cargo install eza ripgrep && \

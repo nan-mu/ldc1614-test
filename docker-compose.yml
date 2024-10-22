@@ -13,7 +13,7 @@ services:
     #   dockerfile: .devcontainer/Dockerfile
     #   args:
     #     # 注意替换为自己的代理地址，使用http/https代理
-    #     proxy: "http://127.0.0.1:7890"
+    #     proxy: "http://127.0.0.1:7890" 
 
     volumes:
       # Update this to wherever you want VS Code to mount the folder of your project

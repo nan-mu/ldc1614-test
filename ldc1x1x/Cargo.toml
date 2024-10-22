@@ -1,0 +1,19 @@
+[package]
+authors = ["Val Packett <val@packett.cool>"]
+categories = ["embedded", "hardware-support", "no-std"]
+description = "TI LDC1312/LDC1314/LDC1612/LDC1614 inductance-to-digital converter driver for `embedded-hal`"
+keywords = ["embedded-hal-driver", "ldc1312", "ldc1314", "ldc1612", "ldc1614"]
+license = "Unlicense"
+name = "ldc1x1x"
+repository = "https://codeberg.org/valpackett/ldc1x1x"
+version = "0.1.2"
+edition = "2018"
+
+[package.metadata.docs.rs]
+targets = ["thumbv7em-none-eabihf"]
+
+[dependencies]
+embedded-hal = "=1.0.0-alpha.6"
+
+[target.'cfg(target_os = "freebsd")'.dev-dependencies]
+freebsd-embedded-hal = "0"

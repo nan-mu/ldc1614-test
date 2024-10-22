@@ -12,6 +12,7 @@
             "debug.overrideProxyUrl": "http://host.docker.internal:7890",
             "debug.testOverrideProxyUrl": "http://host.docker.internal:7890"
         },
+        "rust-analyzer.cargo.target": "aarch64-unknown-linux-musl"
         // "http.proxy": "host.docker.internal:7890",
         // "remote.containers.autoStart": true
     },

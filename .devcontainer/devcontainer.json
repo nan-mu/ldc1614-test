@@ -40,7 +40,8 @@
 				"belfz.search-crates-io",
 				"ms-vscode.vscode-serial-monitor",
 				"wayou.vscode-todo-highlight",
-				"Gruntfuggly.todo-tree"
+				"Gruntfuggly.todo-tree",
+				"eamodio.gitlens"
 			]
 		}
 	}

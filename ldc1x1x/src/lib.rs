@@ -5,7 +5,7 @@
 //! [LDC1612/LDC1614]: https://www.ti.com/lit/ds/symlink/ldc1614.pdf
 #![no_std]
 // #![feature(const_float_bits_conv, const_fn_floating_point_arithmetic)]
-use embedded_hal::i2c::blocking as i2c;
+// use embedded_hal::i2c::blocking as i2c;
 
 mod data;
 pub use data::*;
@@ -25,9 +25,11 @@ pub struct Ldc<I2c> {
     adr: u8,
 }
 
+use embedded_hal::i2c;
+
 impl<I2c, BE> Ldc<I2c>
 where
-    I2c: i2c::Write<Error = BE> + i2c::WriteRead<Error = BE>,
+    I2c: i2c::I2c<Error = BE>,
 {
     pub fn new(bus: I2c, adr: u8) -> Self {
         Ldc { bus, adr }

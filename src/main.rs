@@ -1,34 +1,67 @@
 // i2c_ds3231.rs - Sets and retrieves the time on a Maxim Integrated DS3231
 // RTC using I2C.
 
-use std::error::Error;
-use std::thread;
-use std::time::Duration;
-
 use ldc1x1x as ldc;
-use rppal::i2c::{self, I2c};
-
+use rppal::i2c::I2c;
 //ADDR接地时ldc1614的地址
-const ADDR_LDC1614: u16 = 0x2A;
+const ADDR_LDC1614: u8 = 0x2A;
 
-// Helper functions to encode and decode binary-coded decimal (BCD) values.
-fn bcd2dec(bcd: u8) -> u8 {
-    (((bcd & 0xF0) >> 4) * 10) + (bcd & 0x0F)
-}
+fn automatic_calibration() {
+    let mut i2c = I2c::new().unwrap(); //创建i2c实例
+    let mut ldc = ldc::Ldc::new(&mut i2c, ADDR_LDC1614);
 
-fn dec2bcd(dec: u8) -> u8 {
-    ((dec / 10) << 4) | (dec % 10)
+    // 1. 创建默认配置并将设备置于 SLEEP 模式
+    let config = Config(0);
+    let new_config_sleep = config.with_active_chan(Channel::Zero).with_sleep_mode(true);
+
+    // 应用配置到 LDC 设备
+    ldc.set_config(new_config_sleep).unwrap();
+
+    // 2. 为通道编写所需的 SETTLECOUNT 和 RCOUNT 值
+    let ch = Channel::Zero;
+    ldc.set_conv_settling_time(ch, 40).unwrap();
+    ldc.set_ref_count_conv_interval(ch, 0x0546).unwrap();
+
+    // 3. 设置自动校准
+    let new_config_auto_cal = config
+        .with_active_chan(Channel::Zero)
+        .with_sleep_mode(true)
+        .with_automatic_sensor_amplitude_correction(false);
+
+    // 应用新的配置
+    ldc.set_config(new_config_auto_cal).unwrap();
+
+    // 4. 使设备退出 SLEEP 模式
+    let new_config_wakeup = config
+        .with_active_chan(Channel::Zero)
+        .with_sleep_mode(false);
+
+    // 应用配置以退出 SLEEP 模式
+    ldc.set_config(new_config_wakeup).unwrap();
+
+    // 5. 允许设备至少执行一次测量
+
+    // 6. 读取 DRIVE_CURRENTx 寄存器中的 INIT_DRIVEx 字段
+    let drive_current = ldc.read_drive_current(ch).unwrap();
+    let init_drive_value = (drive_current >> 6) & 0x1F; // 取出位 10:6
+
+    // 7. 将保存的值写入 IDRIVEx 位字段
+    ldc.write_idrive(ch, init_drive_value).unwrap();
+
+    // 8. 设置固定电流驱动的 RP_OVERRIDE_EN 为 b1
+    let new_config_fixed_current = config
+        .with_active_chan(Channel::Zero)
+        .with_rp_override_en(true);
+
+    // 应用新的配置
+    ldc.set_config(new_config_fixed_current).unwrap();
 }
 
 fn main() {
-    let mut i2c = I2c::new()?;
-
-    i2c.set_slave_address(ADDR_LDC1614)?;
+    let mut i2c = I2c::new().unwrap();
 
     //创建实例，初始化LDC设备
-    let mut ldc = ldc::Ldc::new(i2c, ADDR_LDC1614);
-
-    ldc.set_sleep_mode(true).unwrap();
+    let mut ldc = ldc::Ldc::new(&mut i2c, ADDR_LDC1614);
 
     ldc.reset().unwrap();
 
@@ -64,8 +97,6 @@ fn main() {
         ldc::ErrorConfig::default().with_amplitude_high_error_to_data_register(true),
     )
     .unwrap();
-
-    ldc.set_sleep_mode(true).unwrap();
 
     // timing ignored because polling with a cp2112 with no delays is slow enough already
     // outputting just newline separated numbers so you can feed it into https://github.com/mogenson/ploot

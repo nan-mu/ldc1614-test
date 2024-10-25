@@ -7,6 +7,7 @@
 // #![feature(const_float_bits_conv, const_fn_floating_point_arithmetic)]
 // use embedded_hal::i2c::blocking as i2c;
 
+mod bitmap;
 mod data;
 pub use data::*;
 
@@ -171,56 +172,53 @@ where
 
 mod auto_set {
     //! 自动配置驱动电流相关函数
-    use super::Ldc;
+    use super::{Channel, Ldc};
     use embedded_hal::i2c;
 
     impl<I2c, BE> Ldc<I2c>
     where
         I2c: i2c::I2c<Error = BE>,
     {
-        fn auto_set_drive_current(&mut self) {
+        fn auto_set_drive_current(&mut self, ch: &Channel) {
+            // TODO: 等有日志的时候在这里加上一个WARN说要在物理世界中将待测物体放置在理论最远处
+
             // 1. 创建默认配置并将设备置于 SLEEP 模式
-            let config = ldc1x1x::Config(0); // TODO: 只有要把这玩意改了，谁家rust设置的参数不用枚举啊
-            let channel = ldc1x1x::Channel::Zero; // 操作的目标信道 TODO: 之后我觉得要写一个spite函数从ldc1x1x::Ldc中得到对应通道的操作对象，不然每个设置都写一次操作通道有些抽象
 
-            // 应用配置到 LDC 设备
-            ldc.set_config(config.with_active_chan(channel).with_sleep_mode(true))
-                .unwrap();
             // 2. 为通道编写所需的 SETTLECOUNT 和 RCOUNT 值
-            ldc.set_conv_settling_time(channel, 40).unwrap();
-            ldc.set_ref_count_conv_interval(channel, 0x0546).unwrap();
+            // ldc.set_conv_settling_time(channel, 40).unwrap();
+            // ldc.set_ref_count_conv_interval(channel, 0x0546).unwrap();
 
-            // 3. 设置自动校准
-            let new_config_auto_cal = config
-                .with_active_chan(channel)
-                .with_sleep_mode(true)
-                .with_automatic_sensor_amplitude_correction(false);
+            // // 3. 设置自动校准
+            // let new_config_auto_cal = config
+            //     .with_active_chan(channel)
+            //     .with_sleep_mode(true)
+            //     .with_automatic_sensor_amplitude_correction(false);
 
-            // 应用新的配置
-            ldc.set_config(new_config_auto_cal).unwrap();
+            // // 应用新的配置
+            // ldc.set_config(new_config_auto_cal).unwrap();
 
-            // 4. 使设备退出 SLEEP 模式
-            let new_config_wakeup = config.with_active_chan(channel).with_sleep_mode(false);
+            // // 4. 使设备退出 SLEEP 模式
+            // let new_config_wakeup = config.with_active_chan(channel).with_sleep_mode(false);
 
-            // 应用配置以退出 SLEEP 模式
-            ldc.set_config(new_config_wakeup).unwrap();
+            // // 应用配置以退出 SLEEP 模式
+            // ldc.set_config(new_config_wakeup).unwrap();
 
-            // 5. 允许设备至少执行一次测量
+            // // 5. 允许设备至少执行一次测量
 
-            // 6. 读取 DRIVE_CURRENTx 寄存器中的 INIT_DRIVEx 字段
-            let drive_current = ldc.measured_sensor_drive_current(channel).unwrap();
-            let init_drive_value = (drive_current >> 6) & 0x1F; // 取出位 10:6
+            // // 6. 读取 DRIVE_CURRENTx 寄存器中的 INIT_DRIVEx 字段
+            // let drive_current = ldc.measured_sensor_drive_current(channel).unwrap();
+            // let init_drive_value = (drive_current >> 6) & 0x1F; // 取出位 10:6
 
-            // 7. 将保存的值写入 IDRIVEx 位字段
-            ldc.set_sensor_drive_current(channel, init_drive_value)
-                .unwrap();
+            // // 7. 将保存的值写入 IDRIVEx 位字段
+            // ldc.set_sensor_drive_current(channel, init_drive_value)
+            //     .unwrap();
 
-            // 8. 设置固定电流驱动的 RP_OVERRIDE_EN 为 b1
-            let new_config_fixed_current =
-                config.with_active_chan(channel).with_rp_override_en(true);
+            // // 8. 设置固定电流驱动的 RP_OVERRIDE_EN 为 b1
+            // let new_config_fixed_current =
+            //     config.with_active_chan(channel).with_rp_override_en(true);
 
-            // 应用新的配置
-            ldc.set_config(new_config_fixed_current).unwrap();
+            // // 应用新的配置
+            // ldc.set_config(new_config_fixed_current).unwrap();
         }
     }
 }

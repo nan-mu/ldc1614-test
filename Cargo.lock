@@ -41,6 +41,7 @@ name = "ldc1x1x"
 version = "0.1.2"
 dependencies = [
  "embedded-hal 1.0.0",
+ "tock-registers",
 ]
 
 [[package]]
@@ -87,6 +88,12 @@ checksum = "64bd7227d85bfd1b8df51e0d83da36d9baaee85eb75730386ef8e3ab6f2a2ea3"
 dependencies = [
  "windows-sys",
 ]
+
+[[package]]
+name = "tock-registers"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b9e2fdb3a1e862c0661768b7ed25390811df1947a8acbfbefe09b47078d93c4"
 
 [[package]]
 name = "void"

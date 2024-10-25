@@ -243,3 +243,40 @@ register_bitfields![
         LC_sensor_drive_current OFFSET(0) NUMBITS(5) [],
     ],
 ];
+
+use core::{cell::RefCell, marker};
+use embedded_hal::i2c;
+use tock_registers::interfaces::{Readable, Writeable};
+struct Ldc<I2C: i2c::I2c, R: tock_registers::RegisterLongName> {
+    inner: RefCell<I2C>,
+    address: u8,
+    data: DataRegisters,
+
+    _register_long_name: marker::PhantomData<R>,
+}
+
+impl<R: tock_registers::RegisterLongName, I2C: i2c::I2c> Readable for Ldc<I2C, R> {
+    type T = u16;
+    type R = R;
+    fn get(&self) -> Self::T {
+        // let reg_address = self._register_long_name.
+        let mut result: [u8; 2] = [0xde, 0xad];
+        self.inner
+            .borrow_mut()
+            .write_read(self.address,, &mut result)
+            .unwrap();
+        (result[0] as u16) << 8 | result[1] as u16
+    }
+}
+
+impl<R: tock_registers::RegisterLongName, I2C: i2c::I2c> Writeable for Ldc<I2C, R> {
+    type T = u16;
+    type R = R;
+    fn set(&self, value: Self::T) -> () {
+        let mut result: [u8; 2] = [(value >> 8) as u8, value as u8];
+        self.inner
+            .borrow_mut()
+            .write(self.address, &mut result)
+            .unwrap();
+    }
+}

@@ -115,28 +115,33 @@ where
         };
         field.read(Bits::from(read))
     }
+
+    pub fn write<Bits, I2C>(&self, i2c: &mut I2C, field: fields::FieldValue<Bits, Register>)
+    where
+        I2C: i2c::I2c<SlaveAddr>,
+        Bits: UIntLike + Into<usize>,
+    {
+        assert!(
+            REGISTER_BYTE_LEN == 1
+                || REGISTER_BYTE_LEN == 2
+                || REGISTER_BYTE_LEN == 4
+                || REGISTER_BYTE_LEN == 8,
+            "RegisterByteLen must be 1, 2, 4, or 8"
+        );
+
+        let mut read = [0; 10];
+        if REGISTER_ADDR < u8::MAX as u16 {
+            read[0] = REGISTER_ADDR as u8;
+        } else {
+            read[0] = (REGISTER_ADDR >> 8) as u8;
+            read[1] = REGISTER_ADDR as u8;
+        }
+        read.copy_from_slice(&field.value.into().to_be_bytes());
+        // let mut read = ; // ok 发现问题，之后可能需要将这个选项暴露出去
+
+        i2c.write(self.slave_address, &read).unwrap();
+    }
 }
-
-// impl<SlaveAddr, I2C, Register, RegisterAddr, Bits>
-//     I2cRegister<SlaveAddr, Register, RegisterAddr>
-// where
-//     SlaveAddr: i2c::AddressMode,
-//     Register: tock_registers::RegisterLongName,
-//     Bits: UIntLike,
-//     I2C: i2c::I2c<SlaveAddr>,
-// {
-//     fn read(&self, i2c: I2C, field: fields::Field<Bits, Register>) -> Bits {
-//         // field.read(self.get())
-//         todo!()
-//     }
-// }
-
-// register_structs! {
-//  InfoRegisters {// 这两个应该没用，不写了
-//      (0x7E => manufacturer_id: ReadOnly<u16,MANUFACTURER_ID::Register>),
-//      (0x7F => device_id: ReadOnly<u16,DEVICE_ID::Register>),
-//  }
-// }
 
 register_bitfields![
     u16,
@@ -331,6 +336,7 @@ register_bitfields![
     ],
 ];
 
+// 发现很多写法很有问题，之后有机会改吧
 #[cfg(feature = "tock")]
 mod tock {
     use core::marker;

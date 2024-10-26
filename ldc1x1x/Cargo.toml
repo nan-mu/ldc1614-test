@@ -9,6 +9,9 @@ repository = "https://codeberg.org/valpackett/ldc1x1x"
 version = "0.1.2"
 edition = "2018"
 
+[features]
+tock = []
+
 [package.metadata.docs.rs]
 targets = ["thumbv7em-none-eabihf"]
 

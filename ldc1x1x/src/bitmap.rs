@@ -245,231 +245,237 @@ register_bitfields![
     ],
 ];
 
-use core::marker;
-use embedded_hal::i2c;
-use std::sync;
-use tock_registers::interfaces;
+#[cfg(feature = "tock")]
+mod tock {
+    use core::marker;
+    use embedded_hal::i2c;
+    use std::sync;
+    use tock_registers::interfaces;
 
-struct ReadOnlyI2c<
-    I2C,
-    SlaveAddr,
-    const LEN: usize,
-    const REG_ADDR: u8,
-    R: tock_registers::RegisterLongName = (),
-> where
-    I2C: i2c::I2c<SlaveAddr>,
-    SlaveAddr: i2c::AddressMode + Copy,
-{
-    inner: sync::RwLock<I2C>,
-    slave_address: SlaveAddr,
-    register_address: u8,
-    associated_register: marker::PhantomData<R>,
-}
+    pub struct ReadOnlyI2c<
+        I2C,
+        SlaveAddr,
+        const LEN: usize,
+        const REG_ADDR: u8,
+        R: tock_registers::RegisterLongName = (),
+    >
+    where
+        I2C: i2c::I2c<SlaveAddr>,
+        SlaveAddr: i2c::AddressMode + Copy,
+    {
+        inner: sync::RwLock<I2C>,
+        slave_address: SlaveAddr,
+        register_address: u8,
+        associated_register: marker::PhantomData<R>,
+    }
 
-impl<I2C, SlaveAddr, const LEN: usize, const REG_ADDR: u8, R> interfaces::Readable
-    for ReadOnlyI2c<I2C, SlaveAddr, LEN, REG_ADDR, R>
-where
-    I2C: i2c::I2c<SlaveAddr>,
-    R: tock_registers::RegisterLongName,
-    SlaveAddr: i2c::AddressMode + Copy,
-{
-    type T = usize;
-    type R = R;
-    fn get(&self) -> Self::T {
-        // let reg_address = self._register_long_name.
-        let mut result: [u8; LEN] = [0; LEN];
-        self.inner
-            .write()
-            .unwrap()
-            .write_read(self.slave_address, &[self.register_address], &mut result)
-            .unwrap();
-        assert!(LEN == 1 || LEN == 2 || LEN == 4 || LEN == 8, "LEN must be 1, 2, 4, or 8");
-        match LEN {
-            //写出这样而不是循环是因为我希望编译器能给我优化了，因为LEN是个常量，且match从ACT上看是收敛的
-            1 => result[0] as usize,
-            2 => (result[0] as usize) << 8 | result[1] as usize,
-            4 => {
-                (result[0] as usize) << 24
-                    | (result[1] as usize) << 16
-                    | (result[2] as usize) << 8
-                    | result[3] as usize
-            },
-            8 => {
-                (result[0] as usize) << 56
-                    | (result[1] as usize) << 48
-                    | (result[2] as usize) << 40
-                    | (result[3] as usize) << 32
-                    | (result[4] as usize) << 24
-                    | (result[5] as usize) << 16
-                    | (result[6] as usize) << 8
-                    | result[7] as usize
-            },
-            _ => unreachable!(),
+    impl<I2C, SlaveAddr, const LEN: usize, const REG_ADDR: u8, R> interfaces::Readable
+        for ReadOnlyI2c<I2C, SlaveAddr, LEN, REG_ADDR, R>
+    where
+        I2C: i2c::I2c<SlaveAddr>,
+        R: tock_registers::RegisterLongName,
+        SlaveAddr: i2c::AddressMode + Copy,
+    {
+        type T = usize;
+        type R = R;
+        fn get(&self) -> Self::T {
+            // let reg_address = self._register_long_name.
+            let mut result: [u8; LEN] = [0; LEN];
+            self.inner
+                .write()
+                .unwrap()
+                .write_read(self.slave_address, &[self.register_address], &mut result)
+                .unwrap();
+            assert!(LEN == 1 || LEN == 2 || LEN == 4 || LEN == 8, "LEN must be 1, 2, 4, or 8");
+            match LEN {
+                //写出这样而不是循环是因为我希望编译器能给我优化了，因为LEN是个常量，且match从ACT上看是收敛的
+                1 => result[0] as usize,
+                2 => (result[0] as usize) << 8 | result[1] as usize,
+                4 => {
+                    (result[0] as usize) << 24
+                        | (result[1] as usize) << 16
+                        | (result[2] as usize) << 8
+                        | result[3] as usize
+                },
+                8 => {
+                    (result[0] as usize) << 56
+                        | (result[1] as usize) << 48
+                        | (result[2] as usize) << 40
+                        | (result[3] as usize) << 32
+                        | (result[4] as usize) << 24
+                        | (result[5] as usize) << 16
+                        | (result[6] as usize) << 8
+                        | result[7] as usize
+                },
+                _ => unreachable!(),
+            }
         }
     }
-}
 
-struct WriteOnlyI2c<
-    I2C,
-    SlaveAddr,
-    const LEN: usize,
-    const REG_ADDR: u8,
-    R: tock_registers::RegisterLongName = (),
-> where
-    I2C: i2c::I2c<SlaveAddr>,
-    SlaveAddr: i2c::AddressMode + Copy,
-{
-    inner: sync::RwLock<I2C>,
-    slave_address: SlaveAddr,
-    register_address: u8,
-    associated_register: marker::PhantomData<R>,
-}
-
-impl<I2C, SlaveAddr, const LEN: usize, const REG_ADDR: u8, R> interfaces::Writeable
-    for WriteOnlyI2c<I2C, SlaveAddr, LEN, REG_ADDR, R>
-where
-    I2C: i2c::I2c<SlaveAddr>,
-    R: tock_registers::RegisterLongName,
-    SlaveAddr: i2c::AddressMode + Copy,
-{
-    type T = usize;
-    type R = R;
-    fn set(&self, value: Self::T) {
-        assert!(LEN == 1 || LEN == 2 || LEN == 4 || LEN == 8, "LEN must be 1, 2, 4, or 8");
-        let mut result: [u8; 9] = [0; 9];
-        result[0] = self.register_address;
-        match LEN {
-            1 => result[1] = value as u8,
-            2 => {
-                result[1] = (value >> 8) as u8;
-                result[2] = value as u8;
-            },
-            4 => {
-                result[1] = (value >> 24) as u8;
-                result[2] = (value >> 16) as u8;
-                result[3] = (value >> 8) as u8;
-                result[4] = value as u8;
-            },
-            8 => {
-                result[1] = (value >> 56) as u8;
-                result[2] = (value >> 48) as u8;
-                result[3] = (value >> 40) as u8;
-                result[4] = (value >> 32) as u8;
-                result[5] = (value >> 24) as u8;
-                result[6] = (value >> 16) as u8;
-                result[7] = (value >> 8) as u8;
-                result[8] = value as u8;
-            },
-            _ => unreachable!(),
-        }
-        self.inner
-            .write()
-            .unwrap()
-            .write(self.slave_address, &result)
-            .unwrap();
+    pub struct WriteOnlyI2c<
+        I2C,
+        SlaveAddr,
+        const LEN: usize,
+        const REG_ADDR: u8,
+        R: tock_registers::RegisterLongName = (),
+    >
+    where
+        I2C: i2c::I2c<SlaveAddr>,
+        SlaveAddr: i2c::AddressMode + Copy,
+    {
+        inner: sync::RwLock<I2C>,
+        slave_address: SlaveAddr,
+        register_address: u8,
+        associated_register: marker::PhantomData<R>,
     }
-}
 
-struct ReadWriteI2c<
-    I2C,
-    SlaveAddr,
-    const LEN: usize,
-    const REG_ADDR: u8,
-    R: tock_registers::RegisterLongName = (),
-> where
-    I2C: i2c::I2c<SlaveAddr>,
-    SlaveAddr: i2c::AddressMode + Copy,
-{
-    inner: sync::RwLock<I2C>,
-    slave_address: SlaveAddr,
-    register_address: u8,
-    associated_register: marker::PhantomData<R>,
-}
-
-impl<I2C, SlaveAddr, const LEN: usize, const REG_ADDR: u8, R> interfaces::Writeable
-    for ReadWriteI2c<I2C, SlaveAddr, LEN, REG_ADDR, R>
-where
-    I2C: i2c::I2c<SlaveAddr>,
-    R: tock_registers::RegisterLongName,
-    SlaveAddr: i2c::AddressMode + Copy,
-{
-    type T = usize;
-    type R = R;
-    fn set(&self, value: Self::T) {
-        assert!(LEN == 1 || LEN == 2 || LEN == 4 || LEN == 8, "LEN must be 1, 2, 4, or 8");
-        let mut result: [u8; 9] = [0; 9];
-        result[0] = self.register_address;
-        match LEN {
-            1 => result[1] = value as u8,
-            2 => {
-                result[1] = (value >> 8) as u8;
-                result[2] = value as u8;
-            },
-            4 => {
-                result[1] = (value >> 24) as u8;
-                result[2] = (value >> 16) as u8;
-                result[3] = (value >> 8) as u8;
-                result[4] = value as u8;
-            },
-            8 => {
-                result[1] = (value >> 56) as u8;
-                result[2] = (value >> 48) as u8;
-                result[3] = (value >> 40) as u8;
-                result[4] = (value >> 32) as u8;
-                result[5] = (value >> 24) as u8;
-                result[6] = (value >> 16) as u8;
-                result[7] = (value >> 8) as u8;
-                result[8] = value as u8;
-            },
-            _ => unreachable!(),
+    impl<I2C, SlaveAddr, const LEN: usize, const REG_ADDR: u8, R> interfaces::Writeable
+        for WriteOnlyI2c<I2C, SlaveAddr, LEN, REG_ADDR, R>
+    where
+        I2C: i2c::I2c<SlaveAddr>,
+        R: tock_registers::RegisterLongName,
+        SlaveAddr: i2c::AddressMode + Copy,
+    {
+        type T = usize;
+        type R = R;
+        fn set(&self, value: Self::T) {
+            assert!(LEN == 1 || LEN == 2 || LEN == 4 || LEN == 8, "LEN must be 1, 2, 4, or 8");
+            let mut result: [u8; 9] = [0; 9];
+            result[0] = self.register_address;
+            match LEN {
+                1 => result[1] = value as u8,
+                2 => {
+                    result[1] = (value >> 8) as u8;
+                    result[2] = value as u8;
+                },
+                4 => {
+                    result[1] = (value >> 24) as u8;
+                    result[2] = (value >> 16) as u8;
+                    result[3] = (value >> 8) as u8;
+                    result[4] = value as u8;
+                },
+                8 => {
+                    result[1] = (value >> 56) as u8;
+                    result[2] = (value >> 48) as u8;
+                    result[3] = (value >> 40) as u8;
+                    result[4] = (value >> 32) as u8;
+                    result[5] = (value >> 24) as u8;
+                    result[6] = (value >> 16) as u8;
+                    result[7] = (value >> 8) as u8;
+                    result[8] = value as u8;
+                },
+                _ => unreachable!(),
+            }
+            self.inner
+                .write()
+                .unwrap()
+                .write(self.slave_address, &result)
+                .unwrap();
         }
-        self.inner
-            .write()
-            .unwrap()
-            .write(self.slave_address, &result)
-            .unwrap();
     }
-}
 
-impl<I2C, SlaveAddr, const LEN: usize, const REG_ADDR: u8, R> interfaces::Readable
-    for ReadWriteI2c<I2C, SlaveAddr, LEN, REG_ADDR, R>
-where
-    I2C: i2c::I2c<SlaveAddr>,
-    R: tock_registers::RegisterLongName,
-    SlaveAddr: i2c::AddressMode + Copy,
-{
-    type T = usize;
-    type R = R;
-    fn get(&self) -> Self::T {
-        // let reg_address = self._register_long_name.
-        let mut result: [u8; LEN] = [0; LEN];
-        self.inner
-            .write()
-            .unwrap()
-            .write_read(self.slave_address, &[self.register_address], &mut result)
-            .unwrap();
-        assert!(LEN == 1 || LEN == 2 || LEN == 4 || LEN == 8, "LEN must be 1, 2, 4, or 8");
-        match LEN {
-            //写出这样而不是循环是因为我希望编译器能给我优化了，因为LEN是个常量，且match从ACT上看是收敛的
-            1 => result[0] as usize,
-            2 => (result[0] as usize) << 8 | result[1] as usize,
-            4 => {
-                (result[0] as usize) << 24
-                    | (result[1] as usize) << 16
-                    | (result[2] as usize) << 8
-                    | result[3] as usize
-            },
-            8 => {
-                (result[0] as usize) << 56
-                    | (result[1] as usize) << 48
-                    | (result[2] as usize) << 40
-                    | (result[3] as usize) << 32
-                    | (result[4] as usize) << 24
-                    | (result[5] as usize) << 16
-                    | (result[6] as usize) << 8
-                    | result[7] as usize
-            },
-            _ => unreachable!(),
+    pub struct ReadWriteI2c<
+        I2C,
+        SlaveAddr,
+        const LEN: usize,
+        const REG_ADDR: u8,
+        R: tock_registers::RegisterLongName = (),
+    >
+    where
+        I2C: i2c::I2c<SlaveAddr>,
+        SlaveAddr: i2c::AddressMode + Copy,
+    {
+        inner: sync::RwLock<I2C>,
+        slave_address: SlaveAddr,
+        register_address: u8,
+        associated_register: marker::PhantomData<R>,
+    }
+
+    impl<I2C, SlaveAddr, const LEN: usize, const REG_ADDR: u8, R> interfaces::Writeable
+        for ReadWriteI2c<I2C, SlaveAddr, LEN, REG_ADDR, R>
+    where
+        I2C: i2c::I2c<SlaveAddr>,
+        R: tock_registers::RegisterLongName,
+        SlaveAddr: i2c::AddressMode + Copy,
+    {
+        type T = usize;
+        type R = R;
+        fn set(&self, value: Self::T) {
+            assert!(LEN == 1 || LEN == 2 || LEN == 4 || LEN == 8, "LEN must be 1, 2, 4, or 8");
+            let mut result: [u8; 9] = [0; 9];
+            result[0] = self.register_address;
+            match LEN {
+                1 => result[1] = value as u8,
+                2 => {
+                    result[1] = (value >> 8) as u8;
+                    result[2] = value as u8;
+                },
+                4 => {
+                    result[1] = (value >> 24) as u8;
+                    result[2] = (value >> 16) as u8;
+                    result[3] = (value >> 8) as u8;
+                    result[4] = value as u8;
+                },
+                8 => {
+                    result[1] = (value >> 56) as u8;
+                    result[2] = (value >> 48) as u8;
+                    result[3] = (value >> 40) as u8;
+                    result[4] = (value >> 32) as u8;
+                    result[5] = (value >> 24) as u8;
+                    result[6] = (value >> 16) as u8;
+                    result[7] = (value >> 8) as u8;
+                    result[8] = value as u8;
+                },
+                _ => unreachable!(),
+            }
+            self.inner
+                .write()
+                .unwrap()
+                .write(self.slave_address, &result)
+                .unwrap();
+        }
+    }
+
+    impl<I2C, SlaveAddr, const LEN: usize, const REG_ADDR: u8, R> interfaces::Readable
+        for ReadWriteI2c<I2C, SlaveAddr, LEN, REG_ADDR, R>
+    where
+        I2C: i2c::I2c<SlaveAddr>,
+        R: tock_registers::RegisterLongName,
+        SlaveAddr: i2c::AddressMode + Copy,
+    {
+        type T = usize;
+        type R = R;
+        fn get(&self) -> Self::T {
+            // let reg_address = self._register_long_name.
+            let mut result: [u8; LEN] = [0; LEN];
+            self.inner
+                .write()
+                .unwrap()
+                .write_read(self.slave_address, &[self.register_address], &mut result)
+                .unwrap();
+            assert!(LEN == 1 || LEN == 2 || LEN == 4 || LEN == 8, "LEN must be 1, 2, 4, or 8");
+            match LEN {
+                //写出这样而不是循环是因为我希望编译器能给我优化了，因为LEN是个常量，且match从ACT上看是收敛的
+                1 => result[0] as usize,
+                2 => (result[0] as usize) << 8 | result[1] as usize,
+                4 => {
+                    (result[0] as usize) << 24
+                        | (result[1] as usize) << 16
+                        | (result[2] as usize) << 8
+                        | result[3] as usize
+                },
+                8 => {
+                    (result[0] as usize) << 56
+                        | (result[1] as usize) << 48
+                        | (result[2] as usize) << 40
+                        | (result[3] as usize) << 32
+                        | (result[4] as usize) << 24
+                        | (result[5] as usize) << 16
+                        | (result[6] as usize) << 8
+                        | result[7] as usize
+                },
+                _ => unreachable!(),
+            }
         }
     }
 }

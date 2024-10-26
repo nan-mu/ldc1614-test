@@ -92,27 +92,9 @@ where
             )
             .unwrap();
         }
-        let read = match REGISTER_BYTE_LEN {
-            1 => read[0] as usize,
-            2 => (read[0] as usize) << 8 | read[1] as usize,
-            4 => {
-                (read[0] as usize) << 24
-                    | (read[1] as usize) << 16
-                    | (read[2] as usize) << 8
-                    | read[3] as usize
-            },
-            8 => {
-                (read[0] as usize) << 56
-                    | (read[1] as usize) << 48
-                    | (read[2] as usize) << 40
-                    | (read[3] as usize) << 32
-                    | (read[4] as usize) << 24
-                    | (read[5] as usize) << 16
-                    | (read[6] as usize) << 8
-                    | read[7] as usize
-            },
-            _ => unreachable!(),
-        };
+        let mut read_fixed = [0u8; 8];
+        read_fixed[..REGISTER_BYTE_LEN].copy_from_slice(&read);
+        let read = usize::from_be_bytes(read_fixed);
         field.read(Bits::from(read))
     }
 

@@ -10,216 +10,159 @@
 mod bitmap;
 mod data;
 mod interface;
-pub use data::*;
+use bitmap::LdcRegister;
 
 #[derive(Debug)]
-pub enum Error<BE> {
-    Bus(BE),
+pub enum Error {
     ConversionUnderRange,
     ConversionOverRange,
     ConversionWatchdogTimeout,
     ConversionAmplitude,
 }
 
-/// TI LDC1x1x driver instance
-pub struct Ldc<I2c> {
-    bus: I2c,
-    adr: u8,
+type Result<T> = core::result::Result<T, Error>;
+
+pub struct Ldc<const ADDR: u8> {
+    register: bitmap::LdcRegister,
 }
 
-use embedded_hal::i2c;
-
-impl<I2c, BE> Ldc<I2c>
-where
-    I2c: i2c::I2c<Error = BE>,
-{
-    pub fn new(bus: I2c, adr: u8) -> Self {
-        Ldc { bus, adr }
+impl<const ADDR: u8> Ldc<ADDR> {
+    pub fn new() -> Self {
+        Ldc::<ADDR> { register: LdcRegister::new(ADDR) }
     }
 
-    pub fn write_reg(&mut self, reg: u8, data: u16) -> Result<(), Error<BE>> {
-        self.bus
-            .write(self.adr, &[reg, (data >> 8) as u8, data as u8])
-            .map_err(Error::Bus)
-    }
+    // pub fn set_ref_count_conv_interval(&mut self, ch: Channel, intv: u16) -> Result<()> {
+    //     self.write_reg(0x08 + ch as u8, intv)
+    // }
 
-    pub fn read_reg(&mut self, reg: u8) -> Result<u16, Error<BE>> {
-        let mut result: [u8; 2] = [0xde, 0xad];
-        self.bus
-            .write_read(self.adr, &[reg], &mut result)
-            .map_err(Error::Bus)?;
-        Ok((result[0] as u16) << 8 | result[1] as u16)
-    }
+    // pub fn ref_count_conv_interval(&mut self, ch: Channel) -> Result<u16, Error<BE>> {
+    //     self.read_reg(0x08 + ch as u8)
+    // }
 
-    /// Read the conversion result for a channel.
-    /// Error flags from the result are returned as errors.
-    /// Reading does clear the error flags on the device.
-    ///
-    /// This function must only be used with 12-bit devices (LDC131x).
-    /// Use read_data_24bit with 24-bit devices (LDC161x).
-    pub fn read_data_12bit(&mut self, ch: Channel) -> Result<u16, Error<BE>> {
-        let b = self.read_reg(2 * ch as u8)?;
-        if b & (1 << 15) != 0 {
-            return Err(Error::ConversionUnderRange);
-        }
-        if b & (1 << 14) != 0 {
-            return Err(Error::ConversionOverRange);
-        }
-        if b & (1 << 13) != 0 {
-            return Err(Error::ConversionWatchdogTimeout);
-        }
-        if b & (1 << 12) != 0 {
-            return Err(Error::ConversionAmplitude);
-        }
-        Ok(b & 0x0fff)
-    }
+    // pub fn set_conv_offset(&mut self, ch: Channel, offs: u16) -> Result<(), Error<BE>> {
+    //     self.write_reg(0x0c + ch as u8, offs)
+    // }
 
-    /// Read the conversion result for a channel.
-    /// Error flags from the result are returned as errors.
-    /// Reading does clear the error flags on the device.
-    ///
-    /// This function must only be used with 24-bit devices (LDC161x).
-    /// Use read_data_12bit with 12-bit devices (LDC131x).
-    pub fn read_data_24bit(&mut self, ch: Channel) -> Result<u32, Error<BE>> {
-        Ok((self.read_data_12bit(ch)? as u32) << 16 | self.read_reg(1 + 2 * ch as u8)? as u32)
-    }
+    // pub fn conv_offset(&mut self, ch: Channel) -> Result<u16, Error<BE>> {
+    //     self.read_reg(0x0c + ch as u8)
+    // }
 
-    pub fn set_ref_count_conv_interval(
-        &mut self,
-        ch: Channel,
-        intv: u16,
-    ) -> Result<(), Error<BE>> {
-        self.write_reg(0x08 + ch as u8, intv)
-    }
+    // pub fn set_conv_settling_time(&mut self, ch: Channel, cnt: u16) -> Result<(), Error<BE>> {
+    //     self.write_reg(0x10 + ch as u8, cnt)
+    // }
 
-    pub fn ref_count_conv_interval(&mut self, ch: Channel) -> Result<u16, Error<BE>> {
-        self.read_reg(0x08 + ch as u8)
-    }
+    // pub fn conv_settling_time(&mut self, ch: Channel) -> Result<u16, Error<BE>> {
+    //     self.read_reg(0x10 + ch as u8)
+    // }
 
-    pub fn set_conv_offset(&mut self, ch: Channel, offs: u16) -> Result<(), Error<BE>> {
-        self.write_reg(0x0c + ch as u8, offs)
-    }
+    // pub fn set_clock_dividers(
+    //     &mut self,
+    //     ch: Channel,
+    //     divs: ClockDividers,
+    // ) -> Result<(), Error<BE>> {
+    //     self.write_reg(0x14 + ch as u8, divs.fin_div << 12 | divs.fref_div)
+    // }
 
-    pub fn conv_offset(&mut self, ch: Channel) -> Result<u16, Error<BE>> {
-        self.read_reg(0x0c + ch as u8)
-    }
+    // pub fn status(&mut self) -> Result<Status, Error<BE>> {
+    //     self.read_reg(0x18).map(Status)
+    // }
 
-    pub fn set_conv_settling_time(&mut self, ch: Channel, cnt: u16) -> Result<(), Error<BE>> {
-        self.write_reg(0x10 + ch as u8, cnt)
-    }
+    // pub fn error_config(&mut self) -> Result<ErrorConfig, Error<BE>> {
+    //     self.read_reg(0x19).map(ErrorConfig)
+    // }
 
-    pub fn conv_settling_time(&mut self, ch: Channel) -> Result<u16, Error<BE>> {
-        self.read_reg(0x10 + ch as u8)
-    }
+    // pub fn set_error_config(&mut self, conf: ErrorConfig) -> Result<(), Error<BE>> {
+    //     self.write_reg(0x19, conf.0)
+    // }
 
-    pub fn set_clock_dividers(
-        &mut self,
-        ch: Channel,
-        divs: ClockDividers,
-    ) -> Result<(), Error<BE>> {
-        self.write_reg(0x14 + ch as u8, divs.fin_div << 12 | divs.fref_div)
-    }
+    // pub fn config(&mut self) -> Result<Config, Error<BE>> {
+    //     self.read_reg(0x1A).map(Config)
+    // }
 
-    pub fn status(&mut self) -> Result<Status, Error<BE>> {
-        self.read_reg(0x18).map(Status)
-    }
+    // pub fn set_config(&mut self, conf: Config) -> Result<(), Error<BE>> {
+    //     self.write_reg(0x1A, conf.0)
+    // }
 
-    pub fn error_config(&mut self) -> Result<ErrorConfig, Error<BE>> {
-        self.read_reg(0x19).map(ErrorConfig)
-    }
+    // pub fn mux_config(&mut self) -> Result<MuxConfig, Error<BE>> {
+    //     self.read_reg(0x1B).map(MuxConfig)
+    // }
 
-    pub fn set_error_config(&mut self, conf: ErrorConfig) -> Result<(), Error<BE>> {
-        self.write_reg(0x19, conf.0)
-    }
+    // pub fn set_mux_config(&mut self, conf: MuxConfig) -> Result<(), Error<BE>> {
+    //     self.write_reg(0x1B, conf.0)
+    // }
 
-    pub fn config(&mut self) -> Result<Config, Error<BE>> {
-        self.read_reg(0x1A).map(Config)
-    }
+    // pub fn reset(&mut self) -> Result<(), Error<BE>> {
+    //     self.write_reg(0x1C, 1 << 15)
+    // }
 
-    pub fn set_config(&mut self, conf: Config) -> Result<(), Error<BE>> {
-        self.write_reg(0x1A, conf.0)
-    }
+    // // TODO: 131x also have a gain field in the reset register
 
-    pub fn mux_config(&mut self) -> Result<MuxConfig, Error<BE>> {
-        self.read_reg(0x1B).map(MuxConfig)
-    }
+    // pub fn set_sensor_drive_current(&mut self, ch: Channel, cur: u8) -> Result<(), Error<BE>> {
+    //     self.write_reg(0x1E + ch as u8, (cur as u16) << 11)
+    // }
 
-    pub fn set_mux_config(&mut self, conf: MuxConfig) -> Result<(), Error<BE>> {
-        self.write_reg(0x1B, conf.0)
-    }
+    // pub fn measured_sensor_drive_current(&mut self, ch: Channel) -> Result<u8, Error<BE>> {
+    //     Ok(((self.read_reg(0x1E + ch as u8)? >> 6) & 0b11111) as u8)
+    // }
 
-    pub fn reset(&mut self) -> Result<(), Error<BE>> {
-        self.write_reg(0x1C, 1 << 15)
-    }
+    // pub fn manufacturer_id(&mut self) -> Result<u16, Error<BE>> {
+    //     self.read_reg(0x7E)
+    // }
 
-    // TODO: 131x also have a gain field in the reset register
-
-    pub fn set_sensor_drive_current(&mut self, ch: Channel, cur: u8) -> Result<(), Error<BE>> {
-        self.write_reg(0x1E + ch as u8, (cur as u16) << 11)
-    }
-
-    pub fn measured_sensor_drive_current(&mut self, ch: Channel) -> Result<u8, Error<BE>> {
-        Ok(((self.read_reg(0x1E + ch as u8)? >> 6) & 0b11111) as u8)
-    }
-
-    pub fn manufacturer_id(&mut self) -> Result<u16, Error<BE>> {
-        self.read_reg(0x7E)
-    }
-
-    pub fn device_id(&mut self) -> Result<u16, Error<BE>> {
-        self.read_reg(0x7F)
-    }
+    // pub fn device_id(&mut self) -> Result<u16, Error<BE>> {
+    //     self.read_reg(0x7F)
+    // }
 }
 
-mod auto_set {
-    //! 自动配置驱动电流相关函数
-    use super::{Channel, Ldc};
-    use embedded_hal::i2c;
+// mod auto_set {
+//     //! 自动配置驱动电流相关函数
+//     use super::{Channel, Ldc};
+//     use embedded_hal::i2c;
 
-    impl<I2c, BE> Ldc<I2c>
-    where
-        I2c: i2c::I2c<Error = BE>,
-    {
-        fn auto_set_drive_current(&mut self, ch: &Channel) {
-            // TODO: 等有日志的时候在这里加上一个WARN说要在物理世界中将待测物体放置在理论最远处
+//     impl<I2c, BE> Ldc<I2c>
+//     where
+//         I2c: i2c::I2c<Error = BE>,
+//     {
+//         fn auto_set_drive_current(&mut self, ch: &Channel) {
+//             // TODO: 等有日志的时候在这里加上一个WARN说要在物理世界中将待测物体放置在理论最远处
 
-            // 1. 创建默认配置并将设备置于 SLEEP 模式
+//             // 1. 创建默认配置并将设备置于 SLEEP 模式
 
-            // 2. 为通道编写所需的 SETTLECOUNT 和 RCOUNT 值
-            // ldc.set_conv_settling_time(channel, 40).unwrap();
-            // ldc.set_ref_count_conv_interval(channel, 0x0546).unwrap();
+//             // 2. 为通道编写所需的 SETTLECOUNT 和 RCOUNT 值
+//             // ldc.set_conv_settling_time(channel, 40).unwrap();
+//             // ldc.set_ref_count_conv_interval(channel, 0x0546).unwrap();
 
-            // // 3. 设置自动校准
-            // let new_config_auto_cal = config
-            //     .with_active_chan(channel)
-            //     .with_sleep_mode(true)
-            //     .with_automatic_sensor_amplitude_correction(false);
+//             // // 3. 设置自动校准
+//             // let new_config_auto_cal = config
+//             //     .with_active_chan(channel)
+//             //     .with_sleep_mode(true)
+//             //     .with_automatic_sensor_amplitude_correction(false);
 
-            // // 应用新的配置
-            // ldc.set_config(new_config_auto_cal).unwrap();
+//             // // 应用新的配置
+//             // ldc.set_config(new_config_auto_cal).unwrap();
 
-            // // 4. 使设备退出 SLEEP 模式
-            // let new_config_wakeup = config.with_active_chan(channel).with_sleep_mode(false);
+//             // // 4. 使设备退出 SLEEP 模式
+//             // let new_config_wakeup = config.with_active_chan(channel).with_sleep_mode(false);
 
-            // // 应用配置以退出 SLEEP 模式
-            // ldc.set_config(new_config_wakeup).unwrap();
+//             // // 应用配置以退出 SLEEP 模式
+//             // ldc.set_config(new_config_wakeup).unwrap();
 
-            // // 5. 允许设备至少执行一次测量
+//             // // 5. 允许设备至少执行一次测量
 
-            // // 6. 读取 DRIVE_CURRENTx 寄存器中的 INIT_DRIVEx 字段
-            // let drive_current = ldc.measured_sensor_drive_current(channel).unwrap();
-            // let init_drive_value = (drive_current >> 6) & 0x1F; // 取出位 10:6
+//             // // 6. 读取 DRIVE_CURRENTx 寄存器中的 INIT_DRIVEx 字段
+//             // let drive_current = ldc.measured_sensor_drive_current(channel).unwrap();
+//             // let init_drive_value = (drive_current >> 6) & 0x1F; // 取出位 10:6
 
-            // // 7. 将保存的值写入 IDRIVEx 位字段
-            // ldc.set_sensor_drive_current(channel, init_drive_value)
-            //     .unwrap();
+//             // // 7. 将保存的值写入 IDRIVEx 位字段
+//             // ldc.set_sensor_drive_current(channel, init_drive_value)
+//             //     .unwrap();
 
-            // // 8. 设置固定电流驱动的 RP_OVERRIDE_EN 为 b1
-            // let new_config_fixed_current =
-            //     config.with_active_chan(channel).with_rp_override_en(true);
+//             // // 8. 设置固定电流驱动的 RP_OVERRIDE_EN 为 b1
+//             // let new_config_fixed_current =
+//             //     config.with_active_chan(channel).with_rp_override_en(true);
 
-            // // 应用新的配置
-            // ldc.set_config(new_config_fixed_current).unwrap();
-        }
-    }
-}
+//             // // 应用新的配置
+//             // ldc.set_config(new_config_fixed_current).unwrap();
+//         }
+//     }
+// }

@@ -1,3 +1,4 @@
+use core::marker;
 use embedded_hal::i2c;
 use tock_registers::{fields, UIntLike};
 
@@ -11,7 +12,7 @@ struct I2cRegister<
     Register: tock_registers::RegisterLongName,
 {
     slave_address: SlaveAddr,
-    register: Register,
+    register: marker::PhantomData<Register>,
 }
 
 impl<SlaveAddr, Register, const REGISTER_ADDR: u16, const REGISTER_BYTE_LEN: usize>
@@ -109,6 +110,9 @@ where
     ) -> Bits {
         self.0.read(i2c, field)
     }
+    pub fn new(slave_address: SlaveAddr) -> Self {
+        Self(I2cRegister { slave_address, register: marker::PhantomData })
+    }
 }
 
 impl<SlaveAddr, Register, const REGISTER_ADDR: u16, const REGISTER_BYTE_LEN: usize>
@@ -123,6 +127,9 @@ where
         field: fields::FieldValue<Bits, Register>,
     ) {
         self.0.write(i2c, field)
+    }
+    pub fn new(slave_address: SlaveAddr) -> Self {
+        Self(I2cRegister { slave_address, register: marker::PhantomData })
     }
 }
 
@@ -155,6 +162,9 @@ where
         field: fields::FieldValue<Bits, Register>,
     ) {
         self.0.write(i2c, field)
+    }
+    pub fn new(slave_address: SlaveAddr) -> Self {
+        Self(I2cRegister { slave_address, register: marker::PhantomData })
     }
 }
 

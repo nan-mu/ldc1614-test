@@ -1,4 +1,8 @@
-use crate::interface;
+use crate::{
+    data::Channel,
+    interface::{self, ReadOnlyI2cRegister, ReadWriteI2cRegister},
+    Result,
+};
 use embedded_hal::i2c;
 
 type ReadOnlyLdc<Register, const ADDR: u16> =
@@ -6,45 +10,45 @@ type ReadOnlyLdc<Register, const ADDR: u16> =
 type ReadWriteLdc<Register, const ADDR: u16> =
     interface::ReadWriteI2cRegister<i2c::SevenBitAddress, Register, ADDR, 2>;
 
-struct LdcRegister {
-    data0_msb: ReadOnlyLdc<DATA_MSB::Register, 0x00>,
-    data0_lsb: ReadOnlyLdc<DATA_LSB::Register, 0x01>,
-    data1_msb: ReadOnlyLdc<DATA_MSB::Register, 0x02>,
-    data1_lsb: ReadOnlyLdc<DATA_LSB::Register, 0x03>,
-    data2_msb: ReadOnlyLdc<DATA_MSB::Register, 0x04>,
-    data2_lsb: ReadOnlyLdc<DATA_LSB::Register, 0x05>,
-    data3_msb: ReadOnlyLdc<DATA_MSB::Register, 0x06>,
-    data3_lsb: ReadOnlyLdc<DATA_LSB::Register, 0x07>,
-    rcountx: (
+pub(crate) struct LdcRegister {
+    pub(crate) data0_msb: ReadOnlyLdc<DATA_MSB::Register, 0x00>,
+    pub(crate) data0_lsb: ReadOnlyLdc<DATA_LSB::Register, 0x01>,
+    pub(crate) data1_msb: ReadOnlyLdc<DATA_MSB::Register, 0x02>,
+    pub(crate) data1_lsb: ReadOnlyLdc<DATA_LSB::Register, 0x03>,
+    pub(crate) data2_msb: ReadOnlyLdc<DATA_MSB::Register, 0x04>,
+    pub(crate) data2_lsb: ReadOnlyLdc<DATA_LSB::Register, 0x05>,
+    pub(crate) data3_msb: ReadOnlyLdc<DATA_MSB::Register, 0x06>,
+    pub(crate) data3_lsb: ReadOnlyLdc<DATA_LSB::Register, 0x07>,
+    pub(crate) rcountx: (
         ReadWriteLdc<RCOUNTx::Register, 0x08>,
         ReadWriteLdc<RCOUNTx::Register, 0x09>,
         ReadWriteLdc<RCOUNTx::Register, 0x0a>,
         ReadWriteLdc<RCOUNTx::Register, 0x0b>,
     ),
-    offsetx: (
+    pub(crate) offsetx: (
         ReadWriteLdc<OFFSETx::Register, 0x0c>,
         ReadWriteLdc<OFFSETx::Register, 0x0d>,
         ReadWriteLdc<OFFSETx::Register, 0x0e>,
         ReadWriteLdc<OFFSETx::Register, 0x0f>,
     ),
-    settlecountx: (
+    pub(crate) settlecountx: (
         ReadWriteLdc<SETTLECOUNTx::Register, 0x10>,
         ReadWriteLdc<SETTLECOUNTx::Register, 0x11>,
         ReadWriteLdc<SETTLECOUNTx::Register, 0x12>,
         ReadWriteLdc<SETTLECOUNTx::Register, 0x13>,
     ),
-    clock_dividersx: (
+    pub(crate) clock_dividersx: (
         ReadWriteLdc<CLOCK_DIVIDERSx::Register, 0x14>,
         ReadWriteLdc<CLOCK_DIVIDERSx::Register, 0x15>,
         ReadWriteLdc<CLOCK_DIVIDERSx::Register, 0x16>,
         ReadWriteLdc<CLOCK_DIVIDERSx::Register, 0x17>,
     ),
-    status: ReadOnlyLdc<STATUS::Register, 0x18>,
-    error_config: ReadWriteLdc<ERROR_CONFIG::Register, 0x19>,
-    config: ReadWriteLdc<CONFIG::Register, 0x1a>,
-    mux_config: ReadWriteLdc<MUX_CONFIG::Register, 0x1b>,
-    reset_dev: ReadWriteLdc<RESET_DEV::Register, 0x1c>,
-    drive_currentx: (
+    pub(crate) status: ReadOnlyLdc<STATUS::Register, 0x18>,
+    pub(crate) error_config: ReadWriteLdc<ERROR_CONFIG::Register, 0x19>,
+    pub(crate) config: ReadWriteLdc<CONFIG::Register, 0x1a>,
+    pub(crate) mux_config: ReadWriteLdc<MUX_CONFIG::Register, 0x1b>,
+    pub(crate) reset_dev: ReadWriteLdc<RESET_DEV::Register, 0x1c>,
+    pub(crate) drive_currentx: (
         ReadWriteLdc<DRIVE_CURRENTx::Register, 0x1e>,
         ReadWriteLdc<DRIVE_CURRENTx::Register, 0x1e>,
         ReadWriteLdc<DRIVE_CURRENTx::Register, 0x1e>,
@@ -52,33 +56,83 @@ struct LdcRegister {
     ),
 }
 
+impl LdcRegister {
+    pub(crate) fn new(addr: u8) -> Self {
+        LdcRegister {
+            data0_msb: ReadOnlyI2cRegister::new(addr),
+            data0_lsb: ReadOnlyI2cRegister::new(addr),
+            data1_msb: ReadOnlyI2cRegister::new(addr),
+            data1_lsb: ReadOnlyI2cRegister::new(addr),
+            data2_msb: ReadOnlyI2cRegister::new(addr),
+            data2_lsb: ReadOnlyI2cRegister::new(addr),
+            data3_msb: ReadOnlyI2cRegister::new(addr),
+            data3_lsb: ReadOnlyI2cRegister::new(addr),
+            rcountx: (
+                ReadWriteI2cRegister::new(addr),
+                ReadWriteI2cRegister::new(addr),
+                ReadWriteI2cRegister::new(addr),
+                ReadWriteI2cRegister::new(addr),
+            ),
+            offsetx: (
+                ReadWriteI2cRegister::new(addr),
+                ReadWriteI2cRegister::new(addr),
+                ReadWriteI2cRegister::new(addr),
+                ReadWriteI2cRegister::new(addr),
+            ),
+            settlecountx: (
+                ReadWriteI2cRegister::new(addr),
+                ReadWriteI2cRegister::new(addr),
+                ReadWriteI2cRegister::new(addr),
+                ReadWriteI2cRegister::new(addr),
+            ),
+            clock_dividersx: (
+                ReadWriteI2cRegister::new(addr),
+                ReadWriteI2cRegister::new(addr),
+                ReadWriteI2cRegister::new(addr),
+                ReadWriteI2cRegister::new(addr),
+            ),
+            status: ReadOnlyI2cRegister::new(addr),
+            error_config: ReadWriteI2cRegister::new(addr),
+            config: ReadWriteI2cRegister::new(addr),
+            mux_config: ReadWriteI2cRegister::new(addr),
+            reset_dev: ReadWriteI2cRegister::new(addr),
+            drive_currentx: (
+                ReadWriteI2cRegister::new(addr),
+                ReadWriteI2cRegister::new(addr),
+                ReadWriteI2cRegister::new(addr),
+                ReadWriteI2cRegister::new(addr),
+            ),
+        }
+    }
+}
+
 tock_registers::register_bitfields![
-    u16,
-    DATA_MSB [
+    usize,
+    pub(crate) DATA_MSB [
         data OFFSET(0) NUMBITS(12),
         err_ae OFFSET(0) NUMBITS(1),
         err_wd OFFSET(0) NUMBITS(1),
         err_or OFFSET(0) NUMBITS(1),
         err_ur OFFSET(0) NUMBITS(1),
     ],
-    DATA_LSB [
+    pub(crate) DATA_LSB [
         data OFFSET(0) NUMBITS(16),
     ],
-    RCOUNTx [
+    pub(crate) RCOUNTx [
         rcount OFFSET(0) NUMBITS(16),
     ],
-    OFFSETx [
+    pub(crate) OFFSETx [
         offset OFFSET(0) NUMBITS(16),
     ],
-    SETTLECOUNTx [
+    pub(crate) SETTLECOUNTx [
         settlecount OFFSET(0) NUMBITS(16),
     ],
-    CLOCK_DIVIDERSx [
+    pub(crate) CLOCK_DIVIDERSx [
         fref_divider OFFSET(0) NUMBITS(10),
         reserved OFFSET(0) NUMBITS(2),
         fin_divider OFFSET(0) NUMBITS(4),
     ],
-    STATUS [
+    pub(crate) STATUS [
         unread_conv0 OFFSET(0) NUMBITS(1) [
             unread_conversion = 1,
             fine = 0
@@ -130,7 +184,7 @@ tock_registers::register_bitfields![
             channel3 = 3,
         ],
     ],
-    ERROR_CONFIG [
+    pub(crate) ERROR_CONFIG [
         data_ready_to_INTB OFFSET(0) NUMBITS(1) [
             no_report = 0,
             report = 1
@@ -180,7 +234,7 @@ tock_registers::register_bitfields![
             report = 1
         ],
     ],
-    CONFIG [
+    pub(crate) CONFIG [
         high_current_sensor_drive OFFSET(6) NUMBITS(1) [
             normal = 0,
             high = 1,
@@ -216,7 +270,7 @@ tock_registers::register_bitfields![
             channel3 = 3
         ]
     ],
-    MUX_CONFIG [
+    pub(crate) MUX_CONFIG [
         input_deglitch_filter_bandwidth OFFSET(0) NUMBITS(3) [
             with_1MHz = 0b001,
             with_3MHz3 = 0b100,
@@ -234,16 +288,33 @@ tock_registers::register_bitfields![
             auto = 1,
         ],
     ],
-    RESET_DEV [
+    pub(crate) RESET_DEV [
         device_reset OFFSET(15) NUMBITS(1) [
             reset = 1
         ]
     ],
-    DRIVE_CURRENTx [
+    pub(crate) DRIVE_CURRENTx [
         sensor_current_drive OFFSET(6) NUMBITS(5) [],
         LC_sensor_drive_current OFFSET(0) NUMBITS(5) [],
     ],
 ];
+
+impl<const ADDR: u8> super::Ldc<ADDR> {
+    pub fn read_data<I2C: i2c::I2c>(&mut self, i2c: &mut I2C, ch: Channel) -> Result<u32> {
+        Ok((match ch {
+            Channel::Zero => self.register.data0_msb.read(i2c, DATA_MSB::data),
+            Channel::One => self.register.data1_msb.read(i2c, DATA_MSB::data),
+            Channel::Two => self.register.data2_msb.read(i2c, DATA_MSB::data),
+            Channel::Three => self.register.data3_msb.read(i2c, DATA_MSB::data),
+        } << 8
+            | match ch {
+                Channel::Zero => self.register.data0_lsb.read(i2c, DATA_LSB::data),
+                Channel::One => self.register.data1_lsb.read(i2c, DATA_LSB::data),
+                Channel::Two => self.register.data2_lsb.read(i2c, DATA_LSB::data),
+                Channel::Three => self.register.data3_lsb.read(i2c, DATA_LSB::data),
+            }) as u32)
+    }
+}
 
 // register_structs! {
 //     DataRegisters {

@@ -1,6 +1,7 @@
 use tock_registers::{
     register_bitfields, register_structs,
     registers::{ReadOnly, ReadWrite},
+    UIntLike,
 };
 
 register_structs! {
@@ -44,6 +45,91 @@ register_structs! {
         (0x22 => @END),
     }
 }
+
+use embedded_hal::i2c;
+use tock_registers::fields;
+
+pub struct I2cRegister<
+    SlaveAddr,
+    Register,
+    const REGISTER_ADDR: u16,
+    const REGISTER_BYTE_LEN: usize,
+> where
+    SlaveAddr: i2c::AddressMode + Copy,
+    Register: tock_registers::RegisterLongName,
+{
+    slave_address: SlaveAddr,
+    register: Register,
+}
+
+impl<SlaveAddr, Register, const REGISTER_ADDR: u16, const REGISTER_BYTE_LEN: usize>
+    I2cRegister<SlaveAddr, Register, REGISTER_ADDR, REGISTER_BYTE_LEN>
+where
+    SlaveAddr: i2c::AddressMode + Copy,
+    Register: tock_registers::RegisterLongName,
+{
+    pub fn read<Bits, I2C>(&self, i2c: &mut I2C, field: fields::Field<Bits, Register>) -> Bits
+    where
+        I2C: i2c::I2c<SlaveAddr>,
+        Bits: UIntLike + From<usize>,
+    {
+        assert!(
+            REGISTER_BYTE_LEN == 1
+                || REGISTER_BYTE_LEN == 2
+                || REGISTER_BYTE_LEN == 4
+                || REGISTER_BYTE_LEN == 8,
+            "RegisterByteLen must be 1, 2, 4, or 8"
+        );
+        let mut read = [0u8; REGISTER_BYTE_LEN];
+        if REGISTER_ADDR < u8::MAX as u16 {
+            i2c.write_read(self.slave_address, &[REGISTER_ADDR as u8], &mut read)
+                .unwrap();
+        } else {
+            i2c.write_read(
+                self.slave_address,
+                &[(REGISTER_ADDR >> 8) as u8, REGISTER_ADDR as u8],
+                &mut read,
+            )
+            .unwrap();
+        }
+        let read = match REGISTER_BYTE_LEN {
+            1 => read[0] as usize,
+            2 => (read[0] as usize) << 8 | read[1] as usize,
+            4 => {
+                (read[0] as usize) << 24
+                    | (read[1] as usize) << 16
+                    | (read[2] as usize) << 8
+                    | read[3] as usize
+            },
+            8 => {
+                (read[0] as usize) << 56
+                    | (read[1] as usize) << 48
+                    | (read[2] as usize) << 40
+                    | (read[3] as usize) << 32
+                    | (read[4] as usize) << 24
+                    | (read[5] as usize) << 16
+                    | (read[6] as usize) << 8
+                    | read[7] as usize
+            },
+            _ => unreachable!(),
+        };
+        field.read(Bits::from(read))
+    }
+}
+
+// impl<SlaveAddr, I2C, Register, RegisterAddr, Bits>
+//     I2cRegister<SlaveAddr, Register, RegisterAddr>
+// where
+//     SlaveAddr: i2c::AddressMode,
+//     Register: tock_registers::RegisterLongName,
+//     Bits: UIntLike,
+//     I2C: i2c::I2c<SlaveAddr>,
+// {
+//     fn read(&self, i2c: I2C, field: fields::Field<Bits, Register>) -> Bits {
+//         // field.read(self.get())
+//         todo!()
+//     }
+// }
 
 // register_structs! {
 //  InfoRegisters {// 这两个应该没用，不写了

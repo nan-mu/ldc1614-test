@@ -299,23 +299,6 @@ tock_registers::register_bitfields![
     ],
 ];
 
-impl<const ADDR: u8> super::Ldc<ADDR> {
-    pub fn read_data<I2C: i2c::I2c>(&mut self, i2c: &mut I2C, ch: Channel) -> Result<u32> {
-        Ok((match ch {
-            Channel::Zero => self.register.data0_msb.read(i2c, DATA_MSB::data),
-            Channel::One => self.register.data1_msb.read(i2c, DATA_MSB::data),
-            Channel::Two => self.register.data2_msb.read(i2c, DATA_MSB::data),
-            Channel::Three => self.register.data3_msb.read(i2c, DATA_MSB::data),
-        } << 8
-            | match ch {
-                Channel::Zero => self.register.data0_lsb.read(i2c, DATA_LSB::data),
-                Channel::One => self.register.data1_lsb.read(i2c, DATA_LSB::data),
-                Channel::Two => self.register.data2_lsb.read(i2c, DATA_LSB::data),
-                Channel::Three => self.register.data3_lsb.read(i2c, DATA_LSB::data),
-            }) as u32)
-    }
-}
-
 // register_structs! {
 //     DataRegisters {
 //         (0x00 => data0_msb: ReadOnly<u8,DATA_MSB::Register>),

@@ -11,6 +11,8 @@ mod bitmap;
 mod data;
 mod interface;
 use bitmap::LdcRegister;
+use data::Channel;
+use embedded_hal::i2c;
 
 #[derive(Debug)]
 pub enum Error {
@@ -27,8 +29,34 @@ pub struct Ldc<const ADDR: u8> {
 }
 
 impl<const ADDR: u8> Ldc<ADDR> {
-    pub fn new() -> Self {
-        Ldc::<ADDR> { register: LdcRegister::new(ADDR) }
+    /// 生成ldc1614控制对象并进行一次初始化；
+    /// 建议等待10ms后在对设备进行操作。
+    pub fn new<I2C: i2c::I2c>(i2c: &mut I2C) -> Self {
+        use bitmap::RESET_DEV;
+        let ldc = Ldc::<ADDR> { register: LdcRegister::new(ADDR) };
+        ldc.register
+            .reset_dev
+            .write(i2c, RESET_DEV::device_reset::reset);
+        ldc
+    }
+    pub fn read_data<I2C: i2c::I2c>(
+        &mut self,
+        i2c: &mut I2C,
+        ch: data::Channel,
+    ) -> Result<u32> {
+        use bitmap::{DATA_LSB, DATA_MSB};
+        Ok((match ch {
+            Channel::Zero => self.register.data0_msb.read(i2c, DATA_MSB::data),
+            Channel::One => self.register.data1_msb.read(i2c, DATA_MSB::data),
+            Channel::Two => self.register.data2_msb.read(i2c, DATA_MSB::data),
+            Channel::Three => self.register.data3_msb.read(i2c, DATA_MSB::data),
+        } << 8
+            | match ch {
+                Channel::Zero => self.register.data0_lsb.read(i2c, DATA_LSB::data),
+                Channel::One => self.register.data1_lsb.read(i2c, DATA_LSB::data),
+                Channel::Two => self.register.data2_lsb.read(i2c, DATA_LSB::data),
+                Channel::Three => self.register.data3_lsb.read(i2c, DATA_LSB::data),
+            }) as u32)
     }
 
     // pub fn set_ref_count_conv_interval(&mut self, ch: Channel, intv: u16) -> Result<()> {

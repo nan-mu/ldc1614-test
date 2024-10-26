@@ -9,6 +9,7 @@
 
 mod bitmap;
 mod data;
+mod interface;
 pub use data::*;
 
 #[derive(Debug)]

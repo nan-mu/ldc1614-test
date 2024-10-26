@@ -1,44 +1,56 @@
-// register_structs! {
-//     DataRegisters {
-//         (0x00 => data0_msb: ReadOnly<u8,DATA_MSB::Register>),
-//         (0x01 => data0_lsb: ReadOnly<u8,DATA_LSB::Register>),
-//         (0x02 => data1_msb: ReadOnly<u8,DATA_MSB::Register>),
-//         (0x03 => data1_lsb: ReadOnly<u8,DATA_LSB::Register>),
-//         (0x04 => data2_msb: ReadOnly<u8,DATA_MSB::Register>),
-//         (0x05 => data2_lsb: ReadOnly<u8,DATA_LSB::Register>),
-//         (0x06 => data3_msb: ReadOnly<u8,DATA_MSB::Register>),
-//         (0x07 => data3_lsb: ReadOnly<u8,DATA_LSB::Register>),
-//         (0x08 => @END),
-//     }
-// }
-// register_structs! {
-//     ChannelRegisters {
-//         (0x00 => _reserved),
-//         (0x08 => rcountx: [ReadWrite<u8,RCOUNTx::Register>;4]),
-//         (0x0c => offsetx: [ReadWrite<u8,OFFSETx::Register>;4]),
-//         (0x10 => settlecountx: [ReadWrite<u8,SETTLECOUNTx::Register>;4]),
-//         (0x14 => clock_dividersx: [ReadWrite<u8,CLOCK_DIVIDERSx::Register>;4]),
-//         (0x18 => @END),
-//     }
-// }
-// register_structs! {
-//     ConfigRegisters {
-//         (0x00 => _reserved),
-//         (0x18 => status: ReadOnly<u8,STATUS::Register>),
-//         (0x19 => error_config: ReadWrite<u8,ERROR_CONFIG::Register>),
-//         (0x1a => config: ReadWrite<u8,CONFIG::Register>),
-//         (0x1b => mux_config: ReadWrite<u8,MUX_CONFIG::Register>),
-//         (0x1c => reset_dev: ReadWrite<u8,RESET_DEV::Register>),
-//         (0x1d => @END),
-//     }
-// }
-// register_structs! {
-//     DriveCurrentRegisters {
-//         (0x00 => _reserved),
-//         (0x1e => drive_currentx: [ReadWrite<u8,DRIVE_CURRENTx::Register>;4]),
-//         (0x22 => @END),
-//     }
-// }
+use crate::interface;
+use embedded_hal::i2c;
+
+type ReadOnlyLdc<Register, const ADDR: u16> =
+    interface::ReadOnlyI2cRegister<i2c::SevenBitAddress, Register, ADDR, 2>;
+type ReadWriteLdc<Register, const ADDR: u16> =
+    interface::ReadWriteI2cRegister<i2c::SevenBitAddress, Register, ADDR, 2>;
+
+struct LdcRegister {
+    data0_msb: ReadOnlyLdc<DATA_MSB::Register, 0x00>,
+    data0_lsb: ReadOnlyLdc<DATA_LSB::Register, 0x01>,
+    data1_msb: ReadOnlyLdc<DATA_MSB::Register, 0x02>,
+    data1_lsb: ReadOnlyLdc<DATA_LSB::Register, 0x03>,
+    data2_msb: ReadOnlyLdc<DATA_MSB::Register, 0x04>,
+    data2_lsb: ReadOnlyLdc<DATA_LSB::Register, 0x05>,
+    data3_msb: ReadOnlyLdc<DATA_MSB::Register, 0x06>,
+    data3_lsb: ReadOnlyLdc<DATA_LSB::Register, 0x07>,
+    rcountx: (
+        ReadWriteLdc<RCOUNTx::Register, 0x08>,
+        ReadWriteLdc<RCOUNTx::Register, 0x09>,
+        ReadWriteLdc<RCOUNTx::Register, 0x0a>,
+        ReadWriteLdc<RCOUNTx::Register, 0x0b>,
+    ),
+    offsetx: (
+        ReadWriteLdc<OFFSETx::Register, 0x0c>,
+        ReadWriteLdc<OFFSETx::Register, 0x0d>,
+        ReadWriteLdc<OFFSETx::Register, 0x0e>,
+        ReadWriteLdc<OFFSETx::Register, 0x0f>,
+    ),
+    settlecountx: (
+        ReadWriteLdc<SETTLECOUNTx::Register, 0x10>,
+        ReadWriteLdc<SETTLECOUNTx::Register, 0x11>,
+        ReadWriteLdc<SETTLECOUNTx::Register, 0x12>,
+        ReadWriteLdc<SETTLECOUNTx::Register, 0x13>,
+    ),
+    clock_dividersx: (
+        ReadWriteLdc<CLOCK_DIVIDERSx::Register, 0x14>,
+        ReadWriteLdc<CLOCK_DIVIDERSx::Register, 0x15>,
+        ReadWriteLdc<CLOCK_DIVIDERSx::Register, 0x16>,
+        ReadWriteLdc<CLOCK_DIVIDERSx::Register, 0x17>,
+    ),
+    status: ReadOnlyLdc<STATUS::Register, 0x18>,
+    error_config: ReadWriteLdc<ERROR_CONFIG::Register, 0x19>,
+    config: ReadWriteLdc<CONFIG::Register, 0x1a>,
+    mux_config: ReadWriteLdc<MUX_CONFIG::Register, 0x1b>,
+    reset_dev: ReadWriteLdc<RESET_DEV::Register, 0x1c>,
+    drive_currentx: (
+        ReadWriteLdc<DRIVE_CURRENTx::Register, 0x1e>,
+        ReadWriteLdc<DRIVE_CURRENTx::Register, 0x1e>,
+        ReadWriteLdc<DRIVE_CURRENTx::Register, 0x1e>,
+        ReadWriteLdc<DRIVE_CURRENTx::Register, 0x1e>,
+    ),
+}
 
 tock_registers::register_bitfields![
     u16,
@@ -232,3 +244,45 @@ tock_registers::register_bitfields![
         LC_sensor_drive_current OFFSET(0) NUMBITS(5) [],
     ],
 ];
+
+// register_structs! {
+//     DataRegisters {
+//         (0x00 => data0_msb: ReadOnly<u8,DATA_MSB::Register>),
+//         (0x01 => data0_lsb: ReadOnly<u8,DATA_LSB::Register>),
+//         (0x02 => data1_msb: ReadOnly<u8,DATA_MSB::Register>),
+//         (0x03 => data1_lsb: ReadOnly<u8,DATA_LSB::Register>),
+//         (0x04 => data2_msb: ReadOnly<u8,DATA_MSB::Register>),
+//         (0x05 => data2_lsb: ReadOnly<u8,DATA_LSB::Register>),
+//         (0x06 => data3_msb: ReadOnly<u8,DATA_MSB::Register>),
+//         (0x07 => data3_lsb: ReadOnly<u8,DATA_LSB::Register>),
+//         (0x08 => @END),
+//     }
+// }
+// register_structs! {
+//     ChannelRegisters {
+//         (0x00 => _reserved),
+//         (0x08 => rcountx: [ReadWrite<u8,RCOUNTx::Register>;4]),
+//         (0x0c => offsetx: [ReadWrite<u8,OFFSETx::Register>;4]),
+//         (0x10 => settlecountx: [ReadWrite<u8,SETTLECOUNTx::Register>;4]),
+//         (0x14 => clock_dividersx: [ReadWrite<u8,CLOCK_DIVIDERSx::Register>;4]),
+//         (0x18 => @END),
+//     }
+// }
+// register_structs! {
+//     ConfigRegisters {
+//         (0x00 => _reserved),
+//         (0x18 => status: ReadOnly<u8,STATUS::Register>),
+//         (0x19 => error_config: ReadWrite<u8,ERROR_CONFIG::Register>),
+//         (0x1a => config: ReadWrite<u8,CONFIG::Register>),
+//         (0x1b => mux_config: ReadWrite<u8,MUX_CONFIG::Register>),
+//         (0x1c => reset_dev: ReadWrite<u8,RESET_DEV::Register>),
+//         (0x1d => @END),
+//     }
+// }
+// register_structs! {
+//     DriveCurrentRegisters {
+//         (0x00 => _reserved),
+//         (0x1e => drive_currentx: [ReadWrite<u8,DRIVE_CURRENTx::Register>;4]),
+//         (0x22 => @END),
+//     }
+// }

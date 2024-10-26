@@ -44,6 +44,7 @@ register_structs! {
         (0x22 => @END),
     }
 }
+
 // register_structs! {
 //  InfoRegisters {// 这两个应该没用，不写了
 //      (0x7E => manufacturer_id: ReadOnly<u16,MANUFACTURER_ID::Register>),
@@ -244,39 +245,65 @@ register_bitfields![
     ],
 ];
 
-use core::{cell::RefCell, marker};
+use core::marker;
 use embedded_hal::i2c;
+use std::sync;
 use tock_registers::interfaces::{Readable, Writeable};
-struct Ldc<I2C: i2c::I2c, R: tock_registers::RegisterLongName> {
-    inner: RefCell<I2C>,
-    address: u8,
-    data: DataRegisters,
 
-    _register_long_name: marker::PhantomData<R>,
+struct ReadOnlyI2c<
+    I2C,
+    SlaveAddr,
+    const LEN: usize,
+    const REG_ADDR: u8,
+    R: tock_registers::RegisterLongName = (),
+> where
+    I2C: i2c::I2c<SlaveAddr>,
+    SlaveAddr: i2c::AddressMode + Copy,
+{
+    inner: sync::RwLock<I2C>,
+    slave_address: SlaveAddr,
+    register_address: u8,
+    associated_register: marker::PhantomData<R>,
 }
 
-impl<R: tock_registers::RegisterLongName, I2C: i2c::I2c> Readable for Ldc<I2C, R> {
-    type T = u16;
+impl<I2C, SlaveAddr, const LEN: usize, const REG_ADDR: u8, R> Readable
+    for ReadOnlyI2c<I2C, SlaveAddr, LEN, REG_ADDR, R>
+where
+    I2C: i2c::I2c<SlaveAddr>,
+    R: tock_registers::RegisterLongName,
+    SlaveAddr: i2c::AddressMode + Copy,
+{
+    type T = usize;
     type R = R;
     fn get(&self) -> Self::T {
         // let reg_address = self._register_long_name.
-        let mut result: [u8; 2] = [0xde, 0xad];
+        let mut result: [u8; LEN] = [0; LEN];
         self.inner
-            .borrow_mut()
-            .write_read(self.address,, &mut result)
+            .write()
+            .unwrap()
+            .write_read(self.slave_address, &[self.register_address], &mut result)
             .unwrap();
-        (result[0] as u16) << 8 | result[1] as u16
-    }
-}
-
-impl<R: tock_registers::RegisterLongName, I2C: i2c::I2c> Writeable for Ldc<I2C, R> {
-    type T = u16;
-    type R = R;
-    fn set(&self, value: Self::T) -> () {
-        let mut result: [u8; 2] = [(value >> 8) as u8, value as u8];
-        self.inner
-            .borrow_mut()
-            .write(self.address, &mut result)
-            .unwrap();
+        assert!(LEN == 1 || LEN == 2 || LEN == 4 || LEN == 8, "LEN must be 1, 2, 4, or 8");
+        match LEN {
+            1 => result[0] as usize,
+            2 => (result[0] as usize) << 8 | result[1] as usize,
+            4 => {
+                (result[0] as usize) << 24
+                    | (result[1] as usize) << 16
+                    | (result[2] as usize) << 8
+                    | result[3] as usize
+            },
+            8 => {
+                (result[0] as usize) << 56
+                    | (result[1] as usize) << 48
+                    | (result[2] as usize) << 40
+                    | (result[3] as usize) << 32
+                    | (result[4] as usize) << 24
+                    | (result[5] as usize) << 16
+                    | (result[6] as usize) << 8
+                    | result[7] as usize
+            },
+            _ => unreachable!(),
+        }
     }
 }

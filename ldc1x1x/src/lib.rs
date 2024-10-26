@@ -3,7 +3,7 @@
 //! [`embedded-hal`]: https://docs.rs/embedded-hal
 //! [LDC1312/LDC1314]: https://www.ti.com/lit/ds/symlink/ldc1314.pdf
 //! [LDC1612/LDC1614]: https://www.ti.com/lit/ds/symlink/ldc1614.pdf
-#![no_std]
+// #![no_std]
 // #![feature(const_float_bits_conv, const_fn_floating_point_arithmetic)]
 // use embedded_hal::i2c::blocking as i2c;
 

@@ -114,13 +114,12 @@ where
         let mut read = [0; 10];
         if REGISTER_ADDR < u8::MAX as u16 {
             read[0] = REGISTER_ADDR as u8;
+            read[1..].copy_from_slice(&field.value.into().to_be_bytes());
         } else {
             read[0] = (REGISTER_ADDR >> 8) as u8;
             read[1] = REGISTER_ADDR as u8;
+            read[2..].copy_from_slice(&field.value.into().to_be_bytes());
         }
-        read.copy_from_slice(&field.value.into().to_be_bytes());
-        // let mut read = ; // ok 发现问题，之后可能需要将这个选项暴露出去
-
         i2c.write(self.slave_address, &read).unwrap();
     }
 }

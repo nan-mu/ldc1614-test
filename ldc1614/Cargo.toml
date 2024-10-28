@@ -6,7 +6,7 @@ keywords = ["embedded-hal-driver", "ldc1614"]
 license = "Unlicense"
 name = "ldc1614"
 repository = "https://github.com/nan-mu/ldc1614-test"
-version = "0.0.1"
+version = "0.0.1-beta"
 edition = "2021"
 
 [features]

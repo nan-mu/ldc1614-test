@@ -1,0 +1,20 @@
+[package]
+authors = ["nan mu <mu.nan.11@outlook.com>"]
+categories = ["embedded", "hardware-support", "no-std"]
+description = "TI LDC1614 inductance-to-digital converter user-friendly driver for `embedded-hal`"
+keywords = ["embedded-hal-driver", "ldc1614"]
+license = "Unlicense"
+name = "ldc1614"
+repository = "https://github.com/nan-mu/ldc1614-test"
+version = "0.0.1"
+edition = "2021"
+
+[features]
+tock = []
+
+[package.metadata.docs.rs]
+targets = ["thumbv7em-none-eabihf"]
+
+[dependencies]
+embedded-hal = "1.0.0"
+tock-registers = "0.9.0"

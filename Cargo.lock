@@ -29,19 +29,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "ldc1614-test"
-version = "0.1.0"
-dependencies = [
- "ldc1x1x",
- "rppal",
-]
-
-[[package]]
-name = "ldc1x1x"
-version = "0.1.2"
+name = "ldc1614"
+version = "0.0.1"
 dependencies = [
  "embedded-hal 1.0.0",
  "tock-registers",
+]
+
+[[package]]
+name = "ldc1614-test"
+version = "0.1.0"
+dependencies = [
+ "ldc1614",
+ "rppal",
 ]
 
 [[package]]

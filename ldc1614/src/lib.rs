@@ -8,19 +8,12 @@
 // use embedded_hal::i2c::blocking as i2c;
 
 mod bitmap;
-mod data;
 mod interface;
 use bitmap::LdcRegister;
-use data::Channel;
 use embedded_hal::i2c;
 
 #[derive(Debug)]
-pub enum Error {
-    ConversionUnderRange,
-    ConversionOverRange,
-    ConversionWatchdogTimeout,
-    ConversionAmplitude,
-}
+pub enum Error {}
 
 type Result<T> = core::result::Result<T, Error>;
 
@@ -39,11 +32,7 @@ impl<const ADDR: u8> Ldc<ADDR> {
             .write(i2c, RESET_DEV::device_reset::reset);
         ldc
     }
-    pub fn read_data<I2C: i2c::I2c>(
-        &mut self,
-        i2c: &mut I2C,
-        ch: data::Channel,
-    ) -> Result<u32> {
+    pub fn read_data<I2C: i2c::I2c>(&mut self, i2c: &mut I2C, ch: Channel) -> Result<u32> {
         use bitmap::{DATA_LSB, DATA_MSB};
         Ok((match ch {
             Channel::Zero => self.register.data0_msb.read(i2c, DATA_MSB::data),
@@ -58,89 +47,19 @@ impl<const ADDR: u8> Ldc<ADDR> {
                 Channel::Three => self.register.data3_lsb.read(i2c, DATA_LSB::data),
             }) as u32)
     }
-
-    // pub fn set_ref_count_conv_interval(&mut self, ch: Channel, intv: u16) -> Result<()> {
-    //     self.write_reg(0x08 + ch as u8, intv)
-    // }
-
-    // pub fn ref_count_conv_interval(&mut self, ch: Channel) -> Result<u16, Error<BE>> {
-    //     self.read_reg(0x08 + ch as u8)
-    // }
-
-    // pub fn set_conv_offset(&mut self, ch: Channel, offs: u16) -> Result<(), Error<BE>> {
-    //     self.write_reg(0x0c + ch as u8, offs)
-    // }
-
-    // pub fn conv_offset(&mut self, ch: Channel) -> Result<u16, Error<BE>> {
-    //     self.read_reg(0x0c + ch as u8)
-    // }
-
-    // pub fn set_conv_settling_time(&mut self, ch: Channel, cnt: u16) -> Result<(), Error<BE>> {
-    //     self.write_reg(0x10 + ch as u8, cnt)
-    // }
-
-    // pub fn conv_settling_time(&mut self, ch: Channel) -> Result<u16, Error<BE>> {
-    //     self.read_reg(0x10 + ch as u8)
-    // }
-
-    // pub fn set_clock_dividers(
-    //     &mut self,
-    //     ch: Channel,
-    //     divs: ClockDividers,
-    // ) -> Result<(), Error<BE>> {
-    //     self.write_reg(0x14 + ch as u8, divs.fin_div << 12 | divs.fref_div)
-    // }
-
-    // pub fn status(&mut self) -> Result<Status, Error<BE>> {
-    //     self.read_reg(0x18).map(Status)
-    // }
-
-    // pub fn error_config(&mut self) -> Result<ErrorConfig, Error<BE>> {
-    //     self.read_reg(0x19).map(ErrorConfig)
-    // }
-
-    // pub fn set_error_config(&mut self, conf: ErrorConfig) -> Result<(), Error<BE>> {
-    //     self.write_reg(0x19, conf.0)
-    // }
-
-    // pub fn config(&mut self) -> Result<Config, Error<BE>> {
-    //     self.read_reg(0x1A).map(Config)
-    // }
-
-    // pub fn set_config(&mut self, conf: Config) -> Result<(), Error<BE>> {
-    //     self.write_reg(0x1A, conf.0)
-    // }
-
-    // pub fn mux_config(&mut self) -> Result<MuxConfig, Error<BE>> {
-    //     self.read_reg(0x1B).map(MuxConfig)
-    // }
-
-    // pub fn set_mux_config(&mut self, conf: MuxConfig) -> Result<(), Error<BE>> {
-    //     self.write_reg(0x1B, conf.0)
-    // }
-
-    // pub fn reset(&mut self) -> Result<(), Error<BE>> {
-    //     self.write_reg(0x1C, 1 << 15)
-    // }
-
-    // // TODO: 131x also have a gain field in the reset register
-
-    // pub fn set_sensor_drive_current(&mut self, ch: Channel, cur: u8) -> Result<(), Error<BE>> {
-    //     self.write_reg(0x1E + ch as u8, (cur as u16) << 11)
-    // }
-
-    // pub fn measured_sensor_drive_current(&mut self, ch: Channel) -> Result<u8, Error<BE>> {
-    //     Ok(((self.read_reg(0x1E + ch as u8)? >> 6) & 0b11111) as u8)
-    // }
-
-    // pub fn manufacturer_id(&mut self) -> Result<u16, Error<BE>> {
-    //     self.read_reg(0x7E)
-    // }
-
-    // pub fn device_id(&mut self) -> Result<u16, Error<BE>> {
-    //     self.read_reg(0x7F)
-    // }
 }
+
+pub struct Config {}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Channel {
+    Zero,
+    One,
+    Two,
+    Three,
+}
+
+impl Channel {}
 
 // mod auto_set {
 //     //! 自动配置驱动电流相关函数

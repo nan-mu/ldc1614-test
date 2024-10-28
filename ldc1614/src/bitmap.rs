@@ -1,8 +1,4 @@
-use crate::{
-    data::Channel,
-    interface::{self, ReadOnlyI2cRegister, ReadWriteI2cRegister},
-    Result,
-};
+use crate::interface::{self, ReadOnlyI2cRegister, ReadWriteI2cRegister};
 use embedded_hal::i2c;
 
 type ReadOnlyLdc<Register, const ADDR: u16> =

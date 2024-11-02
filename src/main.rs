@@ -14,6 +14,9 @@ fn main() {
     let mut i2c = I2c::new().unwrap();
     let ldc = Ldc::<0x2b>::new(&mut i2c);
     ldc.register
+        .reset_dev
+        .write(&mut i2c, RESET_DEV::device_reset::reset);
+    ldc.register
         .rcountx
         .0
         .write(&mut i2c, RCOUNTx::rcount.val(0x04d6));

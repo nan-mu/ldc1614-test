@@ -42,7 +42,8 @@ where
             .unwrap();
         }
         let mut read_fixed = [0u8; 8];
-        read_fixed[..REGISTER_BYTE_LEN].copy_from_slice(&read);
+        read_fixed[(8 - REGISTER_BYTE_LEN)..].copy_from_slice(&read);
+        println!("reads: {:?}", read);
         let read = usize::from_be_bytes(read_fixed);
         println!("read: {}", read);
         field.read(Bits::from(read))

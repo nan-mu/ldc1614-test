@@ -12,7 +12,7 @@ fn main() {
     };
     use rppal::i2c::I2c;
     let mut i2c = I2c::new().unwrap();
-    let ldc = Ldc::<0x2a>::new(&mut i2c);
+    let ldc = Ldc::<0x2b>::new(&mut i2c);
     ldc.register
         .rcountx
         .0

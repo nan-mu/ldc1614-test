@@ -6,45 +6,45 @@ type ReadOnlyLdc<Register, const ADDR: u16> =
 type ReadWriteLdc<Register, const ADDR: u16> =
     interface::ReadWriteI2cRegister<i2c::SevenBitAddress, Register, ADDR, 2>;
 
-pub(crate) struct LdcRegister {
-    pub(crate) data0_msb: ReadOnlyLdc<DATA_MSB::Register, 0x00>,
-    pub(crate) data0_lsb: ReadOnlyLdc<DATA_LSB::Register, 0x01>,
-    pub(crate) data1_msb: ReadOnlyLdc<DATA_MSB::Register, 0x02>,
-    pub(crate) data1_lsb: ReadOnlyLdc<DATA_LSB::Register, 0x03>,
-    pub(crate) data2_msb: ReadOnlyLdc<DATA_MSB::Register, 0x04>,
-    pub(crate) data2_lsb: ReadOnlyLdc<DATA_LSB::Register, 0x05>,
-    pub(crate) data3_msb: ReadOnlyLdc<DATA_MSB::Register, 0x06>,
-    pub(crate) data3_lsb: ReadOnlyLdc<DATA_LSB::Register, 0x07>,
-    pub(crate) rcountx: (
+pub struct LdcRegister {
+    pub data0_msb: ReadOnlyLdc<DATA_MSB::Register, 0x00>,
+    pub data0_lsb: ReadOnlyLdc<DATA_LSB::Register, 0x01>,
+    pub data1_msb: ReadOnlyLdc<DATA_MSB::Register, 0x02>,
+    pub data1_lsb: ReadOnlyLdc<DATA_LSB::Register, 0x03>,
+    pub data2_msb: ReadOnlyLdc<DATA_MSB::Register, 0x04>,
+    pub data2_lsb: ReadOnlyLdc<DATA_LSB::Register, 0x05>,
+    pub data3_msb: ReadOnlyLdc<DATA_MSB::Register, 0x06>,
+    pub data3_lsb: ReadOnlyLdc<DATA_LSB::Register, 0x07>,
+    pub rcountx: (
         ReadWriteLdc<RCOUNTx::Register, 0x08>,
         ReadWriteLdc<RCOUNTx::Register, 0x09>,
         ReadWriteLdc<RCOUNTx::Register, 0x0a>,
         ReadWriteLdc<RCOUNTx::Register, 0x0b>,
     ),
-    pub(crate) offsetx: (
+    pub offsetx: (
         ReadWriteLdc<OFFSETx::Register, 0x0c>,
         ReadWriteLdc<OFFSETx::Register, 0x0d>,
         ReadWriteLdc<OFFSETx::Register, 0x0e>,
         ReadWriteLdc<OFFSETx::Register, 0x0f>,
     ),
-    pub(crate) settlecountx: (
+    pub settlecountx: (
         ReadWriteLdc<SETTLECOUNTx::Register, 0x10>,
         ReadWriteLdc<SETTLECOUNTx::Register, 0x11>,
         ReadWriteLdc<SETTLECOUNTx::Register, 0x12>,
         ReadWriteLdc<SETTLECOUNTx::Register, 0x13>,
     ),
-    pub(crate) clock_dividersx: (
+    pub clock_dividersx: (
         ReadWriteLdc<CLOCK_DIVIDERSx::Register, 0x14>,
         ReadWriteLdc<CLOCK_DIVIDERSx::Register, 0x15>,
         ReadWriteLdc<CLOCK_DIVIDERSx::Register, 0x16>,
         ReadWriteLdc<CLOCK_DIVIDERSx::Register, 0x17>,
     ),
-    pub(crate) status: ReadOnlyLdc<STATUS::Register, 0x18>,
-    pub(crate) error_config: ReadWriteLdc<ERROR_CONFIG::Register, 0x19>,
-    pub(crate) config: ReadWriteLdc<CONFIG::Register, 0x1a>,
-    pub(crate) mux_config: ReadWriteLdc<MUX_CONFIG::Register, 0x1b>,
-    pub(crate) reset_dev: ReadWriteLdc<RESET_DEV::Register, 0x1c>,
-    pub(crate) drive_currentx: (
+    pub status: ReadOnlyLdc<STATUS::Register, 0x18>,
+    pub error_config: ReadWriteLdc<ERROR_CONFIG::Register, 0x19>,
+    pub config: ReadWriteLdc<CONFIG::Register, 0x1a>,
+    pub mux_config: ReadWriteLdc<MUX_CONFIG::Register, 0x1b>,
+    pub reset_dev: ReadWriteLdc<RESET_DEV::Register, 0x1c>,
+    pub drive_currentx: (
         ReadWriteLdc<DRIVE_CURRENTx::Register, 0x1e>,
         ReadWriteLdc<DRIVE_CURRENTx::Register, 0x1e>,
         ReadWriteLdc<DRIVE_CURRENTx::Register, 0x1e>,
@@ -104,31 +104,31 @@ impl LdcRegister {
 
 tock_registers::register_bitfields![
     usize,
-    pub(crate) DATA_MSB [
+    pub DATA_MSB [
         data OFFSET(0) NUMBITS(12),
         err_ae OFFSET(0) NUMBITS(1),
         err_wd OFFSET(0) NUMBITS(1),
         err_or OFFSET(0) NUMBITS(1),
         err_ur OFFSET(0) NUMBITS(1),
     ],
-    pub(crate) DATA_LSB [
+    pub DATA_LSB [
         data OFFSET(0) NUMBITS(16),
     ],
-    pub(crate) RCOUNTx [
+    pub RCOUNTx [
         rcount OFFSET(0) NUMBITS(16),
     ],
-    pub(crate) OFFSETx [
+    pub OFFSETx [
         offset OFFSET(0) NUMBITS(16),
     ],
-    pub(crate) SETTLECOUNTx [
+    pub SETTLECOUNTx [
         settlecount OFFSET(0) NUMBITS(16),
     ],
-    pub(crate) CLOCK_DIVIDERSx [
+    pub CLOCK_DIVIDERSx [
         fref_divider OFFSET(0) NUMBITS(10),
         reserved OFFSET(0) NUMBITS(2),
         fin_divider OFFSET(0) NUMBITS(4),
     ],
-    pub(crate) STATUS [
+    pub STATUS [
         unread_conv0 OFFSET(0) NUMBITS(1) [
             unread_conversion = 1,
             fine = 0
@@ -180,7 +180,7 @@ tock_registers::register_bitfields![
             channel3 = 3,
         ],
     ],
-    pub(crate) ERROR_CONFIG [
+    pub ERROR_CONFIG [
         data_ready_to_INTB OFFSET(0) NUMBITS(1) [
             no_report = 0,
             report = 1
@@ -230,7 +230,7 @@ tock_registers::register_bitfields![
             report = 1
         ],
     ],
-    pub(crate) CONFIG [
+    pub CONFIG [
         high_current_sensor_drive OFFSET(6) NUMBITS(1) [
             normal = 0,
             high = 1,
@@ -266,7 +266,7 @@ tock_registers::register_bitfields![
             channel3 = 3
         ]
     ],
-    pub(crate) MUX_CONFIG [
+    pub MUX_CONFIG [
         input_deglitch_filter_bandwidth OFFSET(0) NUMBITS(3) [
             with_1MHz = 0b001,
             with_3MHz3 = 0b100,
@@ -284,12 +284,12 @@ tock_registers::register_bitfields![
             auto = 1,
         ],
     ],
-    pub(crate) RESET_DEV [
+    pub RESET_DEV [
         device_reset OFFSET(15) NUMBITS(1) [
             reset = 1
         ]
     ],
-    pub(crate) DRIVE_CURRENTx [
+    pub DRIVE_CURRENTx [
         sensor_current_drive OFFSET(6) NUMBITS(5) [],
         LC_sensor_drive_current OFFSET(0) NUMBITS(5) [],
     ],

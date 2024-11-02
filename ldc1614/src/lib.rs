@@ -7,7 +7,7 @@
 // #![feature(const_float_bits_conv, const_fn_floating_point_arithmetic)]
 // use embedded_hal::i2c::blocking as i2c;
 
-mod bitmap;
+pub mod bitmap;
 mod interface;
 use bitmap::LdcRegister;
 use embedded_hal::i2c;

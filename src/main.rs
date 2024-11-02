@@ -1,5 +1,7 @@
 //! 用于测试ldc161x板子能否正常工作
 
+use std::{thread::sleep, time::Duration};
+
 fn main() {
     use ldc1614::{
         bitmap::{
@@ -53,9 +55,6 @@ fn main() {
             + CONFIG::sleep_mode::sleep
             + CONFIG::active_channel::channel0,
     );
-    // ldc.register
-    //     .reset_dev
-    //     .write(&mut i2c, RESET_DEV::device_reset.val(0));
     ldc.register.mux_config.write(
         &mut i2c,
         MUX_CONFIG::input_deglitch_filter_bandwidth::with_3MHz3
@@ -67,4 +66,23 @@ fn main() {
         DRIVE_CURRENTx::sensor_current_drive.val(0)
             + DRIVE_CURRENTx::LC_sensor_drive_current.val(0b10010),
     );
+    ldc.register.config.write(
+        &mut i2c,
+        CONFIG::high_current_sensor_drive::normal
+            + CONFIG::INTB_asserted::enable
+            + CONFIG::select_reference_frequency_source::internal_oscillator
+            + CONFIG::automatic_sensor_amplitude_correction::disable
+            + CONFIG::sensor_activation_mode::low
+            + CONFIG::sensor_rp_override::off
+            + CONFIG::sleep_mode::active
+            + CONFIG::active_channel::channel0,
+    );
+
+    loop {
+        sleep(Duration::from_secs(1));
+        println!(
+            "{}",
+            ldc.read_data(&mut i2c, ldc1614::Channel::Zero).unwrap()
+        )
+    }
 }

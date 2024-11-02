@@ -2,12 +2,8 @@ use core::marker;
 use embedded_hal::i2c;
 use tock_registers::{fields, UIntLike};
 
-struct I2cRegister<
-    SlaveAddr,
-    Register,
-    const REGISTER_ADDR: u16,
-    const REGISTER_BYTE_LEN: usize,
-> where
+struct I2cRegister<SlaveAddr, Register, const REGISTER_ADDR: u16, const REGISTER_BYTE_LEN: usize>
+where
     SlaveAddr: i2c::AddressMode + Copy,
     Register: tock_registers::RegisterLongName,
 {
@@ -48,6 +44,7 @@ where
         let mut read_fixed = [0u8; 8];
         read_fixed[..REGISTER_BYTE_LEN].copy_from_slice(&read);
         let read = usize::from_be_bytes(read_fixed);
+        println!("read: {}", read);
         field.read(Bits::from(read))
     }
 
@@ -73,6 +70,7 @@ where
             read[1] = REGISTER_ADDR as u8;
             read[2..].copy_from_slice(&field.value.into().to_be_bytes());
         }
+        println!("write {:?}", read);
         i2c.write(self.slave_address, &read).unwrap();
     }
 }
@@ -111,7 +109,10 @@ where
         self.0.read(i2c, field)
     }
     pub fn new(slave_address: SlaveAddr) -> Self {
-        Self(I2cRegister { slave_address, register: marker::PhantomData })
+        Self(I2cRegister {
+            slave_address,
+            register: marker::PhantomData,
+        })
     }
 }
 
@@ -129,7 +130,10 @@ where
         self.0.write(i2c, field)
     }
     pub fn new(slave_address: SlaveAddr) -> Self {
-        Self(I2cRegister { slave_address, register: marker::PhantomData })
+        Self(I2cRegister {
+            slave_address,
+            register: marker::PhantomData,
+        })
     }
 }
 
@@ -164,7 +168,10 @@ where
         self.0.write(i2c, field)
     }
     pub fn new(slave_address: SlaveAddr) -> Self {
-        Self(I2cRegister { slave_address, register: marker::PhantomData })
+        Self(I2cRegister {
+            slave_address,
+            register: marker::PhantomData,
+        })
     }
 }
 
@@ -231,7 +238,10 @@ mod tock {
                 .unwrap()
                 .write_read(self.slave_address, &[self.register_address], &mut result)
                 .unwrap();
-            assert!(LEN == 1 || LEN == 2 || LEN == 4 || LEN == 8, "LEN must be 1, 2, 4, or 8");
+            assert!(
+                LEN == 1 || LEN == 2 || LEN == 4 || LEN == 8,
+                "LEN must be 1, 2, 4, or 8"
+            );
             match LEN {
                 //写出这样而不是循环是因为我希望编译器能给我优化了，因为LEN是个常量，且match从ACT上看是收敛的
                 1 => result[0] as usize,
@@ -241,7 +251,7 @@ mod tock {
                         | (result[1] as usize) << 16
                         | (result[2] as usize) << 8
                         | result[3] as usize
-                },
+                }
                 8 => {
                     (result[0] as usize) << 56
                         | (result[1] as usize) << 48
@@ -251,7 +261,7 @@ mod tock {
                         | (result[5] as usize) << 16
                         | (result[6] as usize) << 8
                         | result[7] as usize
-                },
+                }
                 _ => unreachable!(),
             }
         }
@@ -284,7 +294,10 @@ mod tock {
         type T = usize;
         type R = R;
         fn set(&self, value: Self::T) {
-            assert!(LEN == 1 || LEN == 2 || LEN == 4 || LEN == 8, "LEN must be 1, 2, 4, or 8");
+            assert!(
+                LEN == 1 || LEN == 2 || LEN == 4 || LEN == 8,
+                "LEN must be 1, 2, 4, or 8"
+            );
             let mut result: [u8; 9] = [0; 9];
             result[0] = self.register_address;
             match LEN {
@@ -292,13 +305,13 @@ mod tock {
                 2 => {
                     result[1] = (value >> 8) as u8;
                     result[2] = value as u8;
-                },
+                }
                 4 => {
                     result[1] = (value >> 24) as u8;
                     result[2] = (value >> 16) as u8;
                     result[3] = (value >> 8) as u8;
                     result[4] = value as u8;
-                },
+                }
                 8 => {
                     result[1] = (value >> 56) as u8;
                     result[2] = (value >> 48) as u8;
@@ -308,7 +321,7 @@ mod tock {
                     result[6] = (value >> 16) as u8;
                     result[7] = (value >> 8) as u8;
                     result[8] = value as u8;
-                },
+                }
                 _ => unreachable!(),
             }
             self.inner
@@ -346,7 +359,10 @@ mod tock {
         type T = usize;
         type R = R;
         fn set(&self, value: Self::T) {
-            assert!(LEN == 1 || LEN == 2 || LEN == 4 || LEN == 8, "LEN must be 1, 2, 4, or 8");
+            assert!(
+                LEN == 1 || LEN == 2 || LEN == 4 || LEN == 8,
+                "LEN must be 1, 2, 4, or 8"
+            );
             let mut result: [u8; 9] = [0; 9];
             result[0] = self.register_address;
             match LEN {
@@ -354,13 +370,13 @@ mod tock {
                 2 => {
                     result[1] = (value >> 8) as u8;
                     result[2] = value as u8;
-                },
+                }
                 4 => {
                     result[1] = (value >> 24) as u8;
                     result[2] = (value >> 16) as u8;
                     result[3] = (value >> 8) as u8;
                     result[4] = value as u8;
-                },
+                }
                 8 => {
                     result[1] = (value >> 56) as u8;
                     result[2] = (value >> 48) as u8;
@@ -370,7 +386,7 @@ mod tock {
                     result[6] = (value >> 16) as u8;
                     result[7] = (value >> 8) as u8;
                     result[8] = value as u8;
-                },
+                }
                 _ => unreachable!(),
             }
             self.inner
@@ -398,7 +414,10 @@ mod tock {
                 .unwrap()
                 .write_read(self.slave_address, &[self.register_address], &mut result)
                 .unwrap();
-            assert!(LEN == 1 || LEN == 2 || LEN == 4 || LEN == 8, "LEN must be 1, 2, 4, or 8");
+            assert!(
+                LEN == 1 || LEN == 2 || LEN == 4 || LEN == 8,
+                "LEN must be 1, 2, 4, or 8"
+            );
             match LEN {
                 //写出这样而不是循环是因为我希望编译器能给我优化了，因为LEN是个常量，且match从ACT上看是收敛的
                 1 => result[0] as usize,
@@ -408,7 +427,7 @@ mod tock {
                         | (result[1] as usize) << 16
                         | (result[2] as usize) << 8
                         | result[3] as usize
-                },
+                }
                 8 => {
                     (result[0] as usize) << 56
                         | (result[1] as usize) << 48
@@ -418,7 +437,7 @@ mod tock {
                         | (result[5] as usize) << 16
                         | (result[6] as usize) << 8
                         | result[7] as usize
-                },
+                }
                 _ => unreachable!(),
             }
         }

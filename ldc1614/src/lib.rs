@@ -34,7 +34,7 @@ impl<const ADDR: u8> Ldc<ADDR> {
             .write(i2c, RESET_DEV::device_reset::reset);
         ldc
     }
-    pub fn read_data<I2C: i2c::I2c>(&mut self, i2c: &mut I2C, ch: Channel) -> Result<u32> {
+    pub fn read_data<I2C: i2c::I2c>(&self, i2c: &mut I2C, ch: Channel) -> Result<u32> {
         use bitmap::{DATA_LSB, DATA_MSB};
         Ok((match ch {
             Channel::Zero => self.register.data0_msb.read(i2c, DATA_MSB::data),

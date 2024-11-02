@@ -18,7 +18,7 @@ pub enum Error {}
 type Result<T> = core::result::Result<T, Error>;
 
 pub struct Ldc<const ADDR: u8> {
-    register: bitmap::LdcRegister,
+    pub register: bitmap::LdcRegister,
 }
 
 impl<const ADDR: u8> Ldc<ADDR> {
@@ -26,7 +26,9 @@ impl<const ADDR: u8> Ldc<ADDR> {
     /// 建议等待10ms后在对设备进行操作。
     pub fn new<I2C: i2c::I2c>(i2c: &mut I2C) -> Self {
         use bitmap::RESET_DEV;
-        let ldc = Ldc::<ADDR> { register: LdcRegister::new(ADDR) };
+        let ldc = Ldc::<ADDR> {
+            register: LdcRegister::new(ADDR),
+        };
         ldc.register
             .reset_dev
             .write(i2c, RESET_DEV::device_reset::reset);

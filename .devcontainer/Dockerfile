@@ -10,6 +10,7 @@ RUN sudo sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/
     sudo apt update && \
     sudo apt install -y \
     musl-tools \ 
+    gcc-aarch64-linux-gnu \
     wget \
     curl \
     vim \

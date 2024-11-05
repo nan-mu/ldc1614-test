@@ -20,7 +20,7 @@ struct Args {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), ()> {
+async fn main() {
     // 解析命令行参数
     let args = Args::parse();
     assert!(args.channel <= 3, "错误：通道只能选择0, 1, 2, 3");
@@ -84,17 +84,11 @@ async fn main() -> Result<(), ()> {
         let timestamp = Local::now().to_string();
         // 写入数据行
         wtr.write_record(&[timestamp, data.to_string()]).unwrap();
-
+        wtr.flush().unwrap();
+        println!("Data has been written to {}", filename);
         // println!(
         //     "{}",
         //     // ldc.read_data(&mut i2c, args.channel).unwrap()
         // )
     }
-
-    // 确保写入完成
-    wtr.flush().unwrap();
-
-    println!("Data has been written to {}", filename);
-
-    Ok(())
 }

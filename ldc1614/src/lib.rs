@@ -42,7 +42,7 @@ impl<const ADDR: u8> Ldc<ADDR> {
             Channel::One => self.register.data1_msb.read(i2c, DATA_MSB::data),
             Channel::Two => self.register.data2_msb.read(i2c, DATA_MSB::data),
             Channel::Three => self.register.data3_msb.read(i2c, DATA_MSB::data),
-        } << 8
+        } << 16
             | match ch {
                 Channel::Zero => self.register.data0_lsb.read(i2c, DATA_LSB::data),
                 Channel::One => self.register.data1_lsb.read(i2c, DATA_LSB::data),

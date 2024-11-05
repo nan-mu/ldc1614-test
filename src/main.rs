@@ -3,6 +3,13 @@
 use std::{thread::sleep, time::Duration};
 
 fn main() {
+    // 初始化日志
+    use env_logger::Builder;
+    use log::debug;
+    Builder::from_default_env()
+        .filter(None, log::LevelFilter::Debug)
+        .init();
+
     use ldc1614::{
         bitmap::{
             CLOCK_DIVIDERSx, DRIVE_CURRENTx, OFFSETx, RCOUNTx, SETTLECOUNTx, CONFIG, ERROR_CONFIG,
@@ -11,6 +18,7 @@ fn main() {
         Ldc,
     };
     use rppal::i2c::I2c;
+    debug!("初始化i2c设备");
     let mut i2c = I2c::new().unwrap();
     let ldc = Ldc::<0x2b>::new(&mut i2c);
     ldc.register

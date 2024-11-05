@@ -18,7 +18,8 @@ struct Args {
     channel: u8,
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     // 解析命令行参数
     let args = Args::parse();
     assert!(args.channel <= 3, "错误：通道只能选择0, 1, 2, 3");
@@ -39,9 +40,14 @@ fn main() {
     // let ldc = Ldc::<0x2b>::new(&mut i2c);
     // ldc.defaule_config(&mut i2c, args.channel).unwrap();
 
+    debug!("连接数据库");
+    let client = redis::Client::open("redis://:mypassword@127.0.0.1/").unwrap();
+    let mut connect = client.get_multiplexed_tokio_connection().await.unwrap();
+
     loop {
         use std::{thread, time::Duration};
         thread::sleep(Duration::from_millis(args.sample_time));
+
         // println!(
         //     "{}",
         //     // ldc.read_data(&mut i2c, args.channel).unwrap()

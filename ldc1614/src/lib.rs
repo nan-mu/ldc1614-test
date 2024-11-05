@@ -49,6 +49,152 @@ impl<const ADDR: u8> Ldc<ADDR> {
                 Channel::Three => self.register.data3_lsb.read(i2c, DATA_LSB::data),
             }) as u32)
     }
+    pub fn defaule_config<I2C: i2c::I2c>(&self, i2c: &mut I2C, ch: Channel) -> Result<()> {
+        use bitmap::{
+            CLOCK_DIVIDERSx, DRIVE_CURRENTx, OFFSETx, RCOUNTx, SETTLECOUNTx, CONFIG, ERROR_CONFIG,
+            MUX_CONFIG, RESET_DEV,
+        };
+        self.register
+            .reset_dev
+            .write(i2c, RESET_DEV::device_reset::reset);
+        match ch {
+            Channel::Zero => {
+                self.register
+                    .rcountx
+                    .0
+                    .write(i2c, RCOUNTx::rcount.val(0x04d6));
+                self.register
+                    .offsetx
+                    .0
+                    .write(i2c, OFFSETx::offset.val(0x0000));
+                self.register
+                    .settlecountx
+                    .0
+                    .write(i2c, SETTLECOUNTx::settlecount.val(0x000a));
+                self.register.clock_dividersx.0.write(
+                    i2c,
+                    CLOCK_DIVIDERSx::fref_divider.val(2) + CLOCK_DIVIDERSx::fin_divider.val(1),
+                );
+                self.register.drive_currentx.0.write(
+                    i2c,
+                    DRIVE_CURRENTx::sensor_current_drive.val(0)
+                        + DRIVE_CURRENTx::LC_sensor_drive_current.val(0b10010),
+                );
+            }
+            Channel::One => {
+                self.register
+                    .rcountx
+                    .1
+                    .write(i2c, RCOUNTx::rcount.val(0x04d6));
+                self.register
+                    .offsetx
+                    .1
+                    .write(i2c, OFFSETx::offset.val(0x0000));
+                self.register
+                    .settlecountx
+                    .1
+                    .write(i2c, SETTLECOUNTx::settlecount.val(0x000a));
+                self.register.clock_dividersx.1.write(
+                    i2c,
+                    CLOCK_DIVIDERSx::fref_divider.val(2) + CLOCK_DIVIDERSx::fin_divider.val(1),
+                );
+                self.register.drive_currentx.1.write(
+                    i2c,
+                    DRIVE_CURRENTx::sensor_current_drive.val(0)
+                        + DRIVE_CURRENTx::LC_sensor_drive_current.val(0b10010),
+                );
+            }
+            Channel::Two => {
+                self.register
+                    .rcountx
+                    .2
+                    .write(i2c, RCOUNTx::rcount.val(0x04d6));
+                self.register
+                    .offsetx
+                    .2
+                    .write(i2c, OFFSETx::offset.val(0x0000));
+                self.register
+                    .settlecountx
+                    .2
+                    .write(i2c, SETTLECOUNTx::settlecount.val(0x000a));
+                self.register.clock_dividersx.2.write(
+                    i2c,
+                    CLOCK_DIVIDERSx::fref_divider.val(2) + CLOCK_DIVIDERSx::fin_divider.val(1),
+                );
+                self.register.drive_currentx.2.write(
+                    i2c,
+                    DRIVE_CURRENTx::sensor_current_drive.val(0)
+                        + DRIVE_CURRENTx::LC_sensor_drive_current.val(0b10010),
+                );
+            }
+            Channel::Three => {
+                self.register
+                    .rcountx
+                    .3
+                    .write(i2c, RCOUNTx::rcount.val(0x04d6));
+                self.register
+                    .offsetx
+                    .3
+                    .write(i2c, OFFSETx::offset.val(0x0000));
+                self.register
+                    .settlecountx
+                    .3
+                    .write(i2c, SETTLECOUNTx::settlecount.val(0x000a));
+                self.register.clock_dividersx.3.write(
+                    i2c,
+                    CLOCK_DIVIDERSx::fref_divider.val(2) + CLOCK_DIVIDERSx::fin_divider.val(1),
+                );
+                self.register.drive_currentx.3.write(
+                    i2c,
+                    DRIVE_CURRENTx::sensor_current_drive.val(0)
+                        + DRIVE_CURRENTx::LC_sensor_drive_current.val(0b10010),
+                );
+            }
+        }
+        self.register.error_config.write(
+            i2c,
+            ERROR_CONFIG::data_ready_to_INTB::no_report
+                + ERROR_CONFIG::zero_count_error_to_INTB::no_report
+                + ERROR_CONFIG::amplitude_low_error_to_INTB::no_report
+                + ERROR_CONFIG::amplitude_high_error_to_INTB::no_report
+                + ERROR_CONFIG::watchdog_timeout_error_to_INTB::no_report
+                + ERROR_CONFIG::over_range_error_to_INTB::no_report
+                + ERROR_CONFIG::under_range_error_to_INTB::no_report
+                + ERROR_CONFIG::amplitude_low_error_to_output_register::no_report
+                + ERROR_CONFIG::amplitude_high_error_to_output_register::no_report
+                + ERROR_CONFIG::watchdog_timeout_error_to_output_register::no_report
+                + ERROR_CONFIG::over_range_error_to_output_register::no_report
+                + ERROR_CONFIG::under_range_error_to_output_register::no_report,
+        );
+        self.register.mux_config.write(
+            i2c,
+            MUX_CONFIG::input_deglitch_filter_bandwidth::with_3MHz3
+                + match ch {
+                    Channel::Zero => MUX_CONFIG::auto_scan_sequence_config::channel_0_1,
+                    Channel::One => MUX_CONFIG::auto_scan_sequence_config::channel_0_1,
+                    Channel::Two => MUX_CONFIG::auto_scan_sequence_config::channel_0_1_2,
+                    Channel::Three => MUX_CONFIG::auto_scan_sequence_config::channel_0_1_2_3,
+                }
+                + MUX_CONFIG::auto_scan_mode::manual,
+        );
+        self.register.config.write(
+            i2c,
+            CONFIG::high_current_sensor_drive::normal
+                + CONFIG::INTB_asserted::enable
+                + CONFIG::select_reference_frequency_source::internal_oscillator
+                + CONFIG::automatic_sensor_amplitude_correction::disable
+                + CONFIG::sensor_activation_mode::low
+                + CONFIG::sensor_rp_override::off
+                + CONFIG::sleep_mode::active
+                + match ch {
+                    Channel::Zero => CONFIG::active_channel::channel0,
+                    Channel::One => CONFIG::active_channel::channel1,
+                    Channel::Two => CONFIG::active_channel::channel2,
+                    Channel::Three => CONFIG::active_channel::channel3,
+                },
+        );
+        Ok(())
+    }
 }
 
 pub struct Config {}

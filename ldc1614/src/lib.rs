@@ -9,6 +9,7 @@
 
 pub mod bitmap;
 mod interface;
+
 use bitmap::LdcRegister;
 use embedded_hal::i2c;
 
@@ -207,7 +208,17 @@ pub enum Channel {
     Three,
 }
 
-impl Channel {}
+// TODO: 改成no_std的
+impl ToString for Channel {
+    fn to_string(&self) -> String {
+        match self {
+            Channel::Zero => "0".to_string(),
+            Channel::One => "1".to_string(),
+            Channel::Two => "2".to_string(),
+            Channel::Three => "3".to_string(),
+        }
+    }
+}
 
 // mod auto_set {
 //     //! 自动配置驱动电流相关函数

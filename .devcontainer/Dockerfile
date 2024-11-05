@@ -24,4 +24,4 @@ RUN sudo sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/
 ENV NODE_PATH=$NVM_DIR/v22/lib/node_modules
 ENV PATH=$NVM_DIR/v22/bin:$PATH
 
-COPY .devcontainer/entrypoint.sh /
+COPY entrypoint.sh /

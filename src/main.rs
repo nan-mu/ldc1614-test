@@ -15,6 +15,10 @@ struct Args {
     /// 选择的通道（0-3）
     #[clap(short, long, default_value_t = 0)]
     channel: u8,
+
+    /// 单次运行完成
+    #[clap(short, long, default_value_t = 5)]
+    test_count: u8,
 }
 
 #[derive(serde::Serialize, Debug)]
@@ -34,7 +38,7 @@ async fn main() {
 
     // 初始化日志
     use env_logger::Builder;
-    use log::{debug, error};
+    use log::{debug, error, info};
     use std::str::FromStr;
     Builder::from_default_env()
         .filter(
@@ -104,7 +108,7 @@ async fn main() {
             _ => Some(input),
         };
 
-        for _ in 0..10 {
+        for _ in 0..args.test_count {
             use std::{thread, time::Duration};
             thread::sleep(Duration::from_millis(args.sample_time));
 
@@ -119,7 +123,7 @@ async fn main() {
         }
         wtr.flush().unwrap();
 
-        println!(
+        info!(
             "数据写入完成到 {}，完成时间 {}{}",
             filename,
             Local::now().to_rfc3339(),

@@ -16,17 +16,15 @@ struct Args {
     channel: u8,
 }
 
-fn generate_pwm_signal(
+use rppal::pwm::{Channel as pwm_channel, Polarity, Pwm};
+use tokio::time::Duration;
+
+async fn generate_pwm_signal(
     frequency: f64,
     duty_cycle: f64,
     microstepping: u8,
-    basic_step_angle: f64,
-    distance_per_rotation: f64,
     travel_distance: f64, // 滑轨前进的距离（毫米）
 ) {
-    use rppal::pwm::{Channel as pwm_channel, Polarity, Pwm};
-    use std::{thread, time::Duration};
-
     // 初始化 PWM 通道
     let pwm = Pwm::with_frequency(
         pwm_channel::Pwm0,
@@ -40,15 +38,14 @@ fn generate_pwm_signal(
     // 启动 PWM 输出
     pwm.enable().expect("Failed to enable PWM");
 
-    // 计算速度 (mm/s)
-    let speed =
-        frequency * distance_per_rotation * basic_step_angle / (microstepping as f64 * 360.0);
+    // 计算速度 (mm/s)，滑轨每转的距离是1.0mm，步进电机在没有细分的情况下，电机每步进一次时的角度为1.8°，
+    let speed = frequency * 1.0 * 1.8 / (microstepping as f64 * 360.0);
 
     // 计算滑轨前进指定距离需要的时间 (秒)
     let travel_time = travel_distance / speed;
 
-    // 使滑轨前进指定距离
-    thread::sleep(Duration::from_secs_f64(travel_time));
+    // 异步等待滑轨前进指定距离
+    tokio::time::sleep(Duration::from_secs_f64(travel_time)).await;
 
     // 停止 PWM 输出
     pwm.disable().expect("Failed to disable PWM");
@@ -110,22 +107,9 @@ async fn main() {
     // 写入表头
     wtr.write_record(&["timestamp", "data"]).unwrap();
 
-    let frequency = 1000.0;
-    let duty_cycle = 0.5;
-    let microstepping = 16;
-    const BASIC_STEP_ANGLE: f64 = 1.8;
-    const DISTANCE_PER_ROTATION: f64 = 1.0; // 一圈移动的距离，单位：mm
-    let travel_distance = 10.0; // 让滑轨前进10毫米
-
     // 调用生成 PWM 信号的函数
-    generate_pwm_signal(
-        frequency,
-        duty_cycle,
-        microstepping,
-        BASIC_STEP_ANGLE,
-        DISTANCE_PER_ROTATION,
-        travel_distance,
-    );
+    //频率为1000hz，占空比50%，细分度16，让滑轨前进10mm
+    generate_pwm_signal(1000.0, 0.5, 16, 10.0).await;
 
     /*
     loop {

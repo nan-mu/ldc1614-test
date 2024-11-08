@@ -1,5 +1,3 @@
-//! 用于测试ldc161x板子能否正常工作
-
 use clap::Parser;
 
 #[derive(Parser, Debug)]
@@ -16,6 +14,44 @@ struct Args {
     /// 选择的通道（0-3）
     #[clap(short, long, default_value_t = 0)]
     channel: u8,
+}
+
+fn generate_pwm_signal(
+    frequency: f64,
+    duty_cycle: f64,
+    microstepping: u8,
+    basic_step_angle: f64,
+    distance_per_rotation: f64,
+    travel_distance: f64, // 滑轨前进的距离（毫米）
+) {
+    use rppal::pwm::{Channel as pwm_channel, Polarity, Pwm};
+    use std::{thread, time::Duration};
+
+    // 初始化 PWM 通道
+    let pwm = Pwm::with_frequency(
+        pwm_channel::Pwm0,
+        frequency,
+        duty_cycle,
+        Polarity::Normal,
+        true,
+    )
+    .expect("Failed to initialize PWM");
+
+    // 启动 PWM 输出
+    pwm.enable().expect("Failed to enable PWM");
+
+    // 计算速度 (mm/s)
+    let speed =
+        frequency * distance_per_rotation * basic_step_angle / (microstepping as f64 * 360.0);
+
+    // 计算滑轨前进指定距离需要的时间 (秒)
+    let travel_time = travel_distance / speed;
+
+    // 使滑轨前进指定距离
+    thread::sleep(Duration::from_secs_f64(travel_time));
+
+    // 停止 PWM 输出
+    pwm.disable().expect("Failed to disable PWM");
 }
 
 #[tokio::main]
@@ -74,36 +110,24 @@ async fn main() {
     // 写入表头
     wtr.write_record(&["timestamp", "data"]).unwrap();
 
-    //用pwm通道输出脉冲信号，
-    use rppal::pwm::{Channel as pwm_channel, Polarity, Pwm};
-    use std::{thread, time::Duration};
-    // 设置PWM频率为1kHz，占空比50%
-    // 启动PWM输出
     let frequency = 1000.0;
-    let duty_cycle: f64 = 0.5;
-    //let microstepping: u8 = 16; //设置细分数为16
-    //const BASIC_STEP_ANGLE: f64 = 1.8;
-    //const DISTANCE_PER_ROTATION: f64 = 1.0; //转动一圈走过的距离，单位是mm
-    let pwm = Pwm::with_frequency(
-        pwm_channel::Pwm0,
+    let duty_cycle = 0.5;
+    let microstepping = 16;
+    const BASIC_STEP_ANGLE: f64 = 1.8;
+    const DISTANCE_PER_ROTATION: f64 = 1.0; // 一圈移动的距离，单位：mm
+    let travel_distance = 10.0; // 让滑轨前进10毫米
+
+    // 调用生成 PWM 信号的函数
+    generate_pwm_signal(
         frequency,
         duty_cycle,
-        Polarity::Normal,
-        true,
-    )
-    .expect("Failed to initialize PWM");
+        microstepping,
+        BASIC_STEP_ANGLE,
+        DISTANCE_PER_ROTATION,
+        travel_distance,
+    );
 
-    pwm.enable().expect("Failed to enable PWM");
-    // 计算距离/ms
-    // Step_Angle = Basic Step Angle / Microstepping
-    // 每个脉冲使滑轨移动的距离： DISTANCE_PER_ROTATION * BASIC_STEP_ANGLE / ((microstepping as f64)*360)
-    // 速度单位是mm/s
-    // speed = frequency * DISTANCE_PER_ROTATION * BASIC_STEP_ANGLE / ((microstepping as f64)*360);
-    // 想让滑轨前进x毫米持续的时间：
-    // t=x/(frequency * DISTANCE_PER_ROTATION * BASIC_STEP_ANGLE / ((microstepping as f64)*360))
-
-    //pwm.enable().expect("Failed to enable PWM");
-
+    /*
     loop {
         use std::{thread, time::Duration};
         thread::sleep(Duration::from_millis(args.sample_time));
@@ -121,4 +145,5 @@ async fn main() {
         //     // ldc.read_data(&mut i2c, args.channel).unwrap()
         // )
     }
+    */
 }

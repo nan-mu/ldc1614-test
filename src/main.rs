@@ -1,4 +1,6 @@
 use clap::Parser;
+use rppal::gpio::Gpio;
+use tokio::sync::TryAcquireError;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -15,40 +17,44 @@ struct Args {
     #[clap(short, long, default_value_t = 0)]
     channel: u8,
 }
-
-use rppal::pwm::{Channel as pwm_channel, Polarity, Pwm};
-use tokio::time::Duration;
-
+/// GPIO模拟PWM输出
+/// 首先说明电机的连接方式是共阴极连接，
+/// ENA-、DIR-、PUL-接控制器的地，
+/// ENA+接使能信号，DIR+接方向信号物理口32，PUL+接脉冲信号物理口40
 async fn generate_pwm_signal(
     frequency: f64,
     duty_cycle: f64,
     microstepping: u8,
     travel_distance: f64, // 滑轨前进的距离（毫米）
 ) {
-    // 初始化 PWM 通道
-    let pwm = Pwm::with_frequency(
-        pwm_channel::Pwm0,
-        frequency,
-        duty_cycle,
-        Polarity::Normal,
-        true,
-    )
-    .expect("Failed to initialize PWM");
+    use tokio::time::Duration;
+
+    let mut pwm = Gpio::new().unwrap().get(21).unwrap().into_output();
 
     // 启动 PWM 输出
-    pwm.enable().expect("Failed to enable PWM");
+    pwm.set_pwm_frequency(frequency, duty_cycle).unwrap();
 
     // 计算速度 (mm/s)，滑轨每转的距离是1.0mm，步进电机在没有细分的情况下，电机每步进一次时的角度为1.8°，
     let speed = frequency * 1.0 * 1.8 / (microstepping as f64 * 360.0);
 
+    //设置方向
+    let mut dir = Gpio::new().unwrap().get(12).unwrap().into_output();
+    let mut travel_distance2 = travel_distance;
+    if travel_distance.is_sign_negative() {
+        dir.set_low();
+        travel_distance2 = -travel_distance;
+    } else {
+        dir.set_high();
+    }
+
     // 计算滑轨前进指定距离需要的时间 (秒)
-    let travel_time = travel_distance / speed;
+    let travel_time = travel_distance2 / speed;
 
     // 异步等待滑轨前进指定距离
     tokio::time::sleep(Duration::from_secs_f64(travel_time)).await;
 
     // 停止 PWM 输出
-    pwm.disable().expect("Failed to disable PWM");
+    pwm.clear_pwm().unwrap();
 }
 
 #[tokio::main]
@@ -109,7 +115,7 @@ async fn main() {
 
     // 调用生成 PWM 信号的函数
     //频率为1000hz，占空比50%，细分度16，让滑轨前进10mm
-    generate_pwm_signal(1000.0, 0.5, 16, 10.0).await;
+    generate_pwm_signal(5000.0, 0.5, 16, 10.0).await;
 
     /*
     loop {

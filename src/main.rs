@@ -33,6 +33,8 @@ struct Record {
     timestamp: chrono::DateTime<chrono::Local>,
     /// 数据
     data: u32,
+    /// 通道
+    channel: ldc1614::Channel,
     /// 可选的标记
     mark: Option<sync::Arc<str>>,
 }
@@ -57,6 +59,8 @@ enum Error {
     ProducerJoinError,
     #[error("配置文件填写错误")]
     ConfigErr,
+    #[error("数据库错误: {0}")]
+    Database(#[from] fred::error::RedisError),
 }
 
 use tokio::sync::broadcast;
@@ -104,7 +108,7 @@ async fn main() -> Result<()> {
 
     // 初始化日志
     use env_logger::Builder;
-    use log::{debug, error, info};
+    use log::debug;
     use std::str::FromStr;
     Builder::from_default_env()
         .filter(
@@ -141,32 +145,6 @@ async fn main() -> Result<()> {
     let pwm = gpio.get(21).unwrap().into_output_low();
     let dir = gpio.get(12).unwrap().into_output_high();
     let mut motor = Motor { pwm, dir };
-
-    // debug!("连接数据库");
-    // let client = redis::Client::open("redis://:mypassword@127.0.0.1/").unwrap();
-    // let mut connect = client.get_multiplexed_tokio_connection().await.unwrap();
-
-    //用于新建文件的库
-    use chrono::Local;
-    use csv::Writer;
-    use std::fs::File;
-    // 获取当前时间并格式化为文件名
-    let filename = format!(
-        "data_{}.csv",
-        Local::now().format("%Y-%m-%d_%H-%M-%S").to_string()
-    );
-
-    // 创建并打开 CSV 文件
-    let file = File::create(&filename).unwrap();
-
-    // 创建 CSV 写入器
-    let mut wtr = Writer::from_writer(file);
-
-    // 写入表头
-    wtr.write_record(&["timestamp", "data", "mark"]).unwrap();
-    use std::io;
-    let stdin = io::stdin();
-    let mut handle = stdin.lock();
 
     // 调用生成 PWM 信号的函数
     //频率为1000hz，占空比50%，细分度16，让滑轨前进10mm

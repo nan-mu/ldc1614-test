@@ -20,6 +20,7 @@ impl<const ADDR: u8> Channel<ADDR> {
             data: ldc
                 .read_data(&mut *i2c, self.channel)
                 .map_err(|e| Error::Ldc1614(e))?,
+            channel: self.channel,
             mark,
         })?)
     }

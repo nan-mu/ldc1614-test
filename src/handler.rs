@@ -2,15 +2,17 @@ use super::{Error, Result};
 
 use std::{
     fs::File,
-    path::{self, Path},
-    sync,
+    path::Path,
+    sync::{self, Arc},
 };
 #[derive(Debug)]
 enum Consumer {
-    Redis,
+    Redis { url: Arc<str> },
     Csv { address: Option<sync::Arc<Path>> },
 }
 
+use fred::prelude::TimeSeriesInterface;
+use ldc1614::Channel;
 use log::{debug, error, info, warn};
 use tokio::sync::broadcast;
 #[derive(Debug)]
@@ -83,13 +85,15 @@ impl Handler {
                     };
 
                     #[derive(serde_derive::Serialize)]
-                    struct CsvRecord<'a> {
+                    struct CsvRecord {
                         /// 时间戳
                         timestamp: chrono::DateTime<chrono::Local>,
                         /// 数据
                         data: u32,
+                        /// 通道
+                        channel: u8,
                         /// 可选的标记
-                        mark: Option<&'a str>,
+                        mark: Option<String>,
                     }
 
                     debug!("发布csv写入线程");
@@ -97,8 +101,17 @@ impl Handler {
                         while let Ok(record) = rx.recv().await {
                             debug!("csv收到数据: {:?}", record);
                             wtr.serialize(CsvRecord {
-                                mark: record.mark.as_deref(),
+                                mark: record
+                                    .mark
+                                    .clone()
+                                    .map(|mark| format!("\"{}\"", mark).replace("\n", "\\n")),
                                 timestamp: record.timestamp,
+                                channel: match record.channel {
+                                    Channel::Zero => 0,
+                                    Channel::One => 1,
+                                    Channel::Two => 2,
+                                    Channel::Three => 3,
+                                },
                                 data: record.data,
                             })
                             .unwrap_or_else(|err| {
@@ -107,10 +120,54 @@ impl Handler {
                         }
                     });
                 }
-                Consumer::Redis => {
+                Consumer::Redis { url } => {
+                    use fred::{
+                        interfaces::ClientLike,
+                        types::{Builder, RedisConfig, RedisMap},
+                    };
+
+                    // 格式为redis://username:password@foo.com:6379/1
+                    let config = RedisConfig::from_url(&url)?;
+                    let client = Builder::from_config(config).build()?;
+                    let _connection_task = client.init().await?;
+
+                    // client.quit().await?; // 之后写信号捕捉的时候移过去
                     tokio::spawn(async move {
                         while let Ok(record) = rx.recv().await {
-                            println!("Received record: {:?}", record);
+                            debug!("redis收到数据: {:?}", record);
+                            client
+                                .ts_add::<usize, &str, i64, RedisMap>(
+                                    match record.channel {
+                                        Channel::Zero => "Channel:0",
+                                        Channel::One => "Channel:1",
+                                        Channel::Two => "Channel:2",
+                                        Channel::Three => "Channel:3",
+                                    },
+                                    record.timestamp.timestamp(),
+                                    record.data as f64,
+                                    None,
+                                    None,
+                                    None,
+                                    None,
+                                    match &record.mark {
+                                        Some(mark) => mark
+                                            .lines()
+                                            .filter_map(|line| {
+                                                let mut parts = line.splitn(2, ',');
+                                                Some((
+                                                    parts.next()?.to_string(),
+                                                    parts.next()?.to_string(),
+                                                ))
+                                            })
+                                            .collect::<fred::types::RedisMap>(),
+                                        None => fred::types::RedisMap::new(),
+                                    },
+                                )
+                                .await
+                                .unwrap_or_else(|err| {
+                                    error!("写入redis失败, 数据为: {:?}, 错误: {:?}", record, err);
+                                    0
+                                });
                         }
                     });
                 }

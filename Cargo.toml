@@ -15,6 +15,7 @@ rppal = { version = "0.19.0", features = ["hal"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
 tokio = { version = "1.41.0", features = ["full"] }
+thiserror = { version = "2" }
 
 [target.aarch64-unknown-linux-gnu]
 linker = "arm-linux-gnueabihf-gcc"

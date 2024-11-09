@@ -1,3 +1,9 @@
+//! 自动化测试ldc1614
+
+mod channel;
+mod database;
+mod handler;
+
 use clap::Parser;
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -19,14 +25,16 @@ struct Args {
     test_count: u8,
 }
 
-#[derive(serde::Serialize, Debug)]
+use std::sync;
+
+#[derive(Debug, Clone)]
 struct Record {
     /// 时间戳
     timestamp: chrono::DateTime<chrono::Local>,
     /// 数据
     data: u32,
     /// 可选的标记
-    mark: Option<String>,
+    mark: Option<sync::Arc<str>>,
 }
 
 use rppal::gpio;
@@ -35,14 +43,26 @@ struct Motor {
     dir: gpio::OutputPin,
 }
 
-#[derive(Debug)]
+use thiserror::Error;
+
+#[derive(Error, Debug)]
 enum Error {
-    Gpio(gpio::Error),
+    #[error("gpio使用错误: {0}")]
+    Gpio(#[from] gpio::Error),
+    #[error("ldc1614错误")]
+    Ldc1614(ldc1614::Error),
+    #[error("生产者发现通道已被关闭")]
+    ProducerError,
+    #[error("生产者无法获得i2c和ldc互斥锁")]
+    ProducerJoinError,
+    #[error("配置文件填写错误")]
+    ConfigErr,
 }
 
-impl From<gpio::Error> for Error {
-    fn from(value: gpio::Error) -> Self {
-        Error::Gpio(value)
+use tokio::sync::broadcast;
+impl From<broadcast::error::SendError<Record>> for Error {
+    fn from(_value: broadcast::error::SendError<Record>) -> Self {
+        Error::ProducerJoinError
     }
 }
 
@@ -110,7 +130,7 @@ async fn main() -> Result<()> {
 
     debug!("初始化i2c设备");
     use rppal::i2c::I2c;
-    let mut i2c = I2c::new().unwrap();
+    let mut i2c: I2c = I2c::new().unwrap();
     use ldc1614::Ldc;
     let ldc = Ldc::<0x2b>::new(&mut i2c);
     ldc.defaule_config(&mut i2c, real_channel).unwrap();
@@ -153,43 +173,43 @@ async fn main() -> Result<()> {
     motor.moving(10.0).await.unwrap();
 
     loop {
-        use std::io::BufRead;
-        let mut input = String::new();
-        match handle.read_line(&mut input) {
-            Err(e) => {
-                error!("错误的输入: {}", e);
-                continue;
-            }
-            _ => {}
-        }
-        let mark = match input.len() {
-            0 => None,
-            _ => Some(input),
-        };
+        // use std::io::BufRead;
+        // let mut input = String::new();
+        // match handle.read_line(&mut input) {
+        //     Err(e) => {
+        //         error!("错误的输入: {}", e);
+        //         continue;
+        //     }
+        //     _ => {}
+        // }
+        // let mark = match input.len() {
+        //     0 => None,
+        //     _ => Some(input),
+        // };
 
-        for _ in 0..args.test_count {
-            use std::{thread, time::Duration};
-            thread::sleep(Duration::from_millis(args.sample_time));
+        // for _ in 0..args.test_count {
+        //     use std::{thread, time::Duration};
+        //     thread::sleep(Duration::from_millis(args.sample_time));
 
-            let data = ldc.read_data(&mut i2c, real_channel).unwrap();
-            // 写入数据行
-            wtr.serialize(Record {
-                timestamp: Local::now(),
-                data,
-                mark: mark.clone(),
-            })
-            .unwrap();
-        }
-        wtr.flush().unwrap();
+        //     let data = ldc.read_data(&mut i2c, real_channel).unwrap();
+        //     // 写入数据行
+        //     wtr.serialize(Record {
+        //         timestamp: Local::now(),
+        //         data,
+        //         mark: Cow::Borrowed(mark),
+        //     })
+        //     .unwrap();
+        // }
+        // wtr.flush().unwrap();
 
-        info!(
-            "数据写入完成到 {}，完成时间 {}{}",
-            filename,
-            Local::now().to_rfc3339(),
-            match mark {
-                None => "".to_string(),
-                Some(_) => format!("，标记为 {}", mark.unwrap()),
-            }
-        );
+        // info!(
+        //     "数据写入完成到 {}，完成时间 {}{}",
+        //     filename,
+        //     Local::now().to_rfc3339(),
+        //     match mark {
+        //         None => "".to_string(),
+        //         Some(_) => format!("，标记为 {}", mark.unwrap()),
+        //     }
+        // );
     }
 }

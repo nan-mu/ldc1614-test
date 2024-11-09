@@ -1,6 +1,5 @@
 use clap::Parser;
 use rppal::gpio::{self, Gpio, OutputPin};
-use tokio::sync::TryAcquireError;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -16,6 +15,20 @@ struct Args {
     /// 选择的通道（0-3）
     #[clap(short, long, default_value_t = 0)]
     channel: u8,
+
+    /// 单次运行完成
+    #[clap(short, long, default_value_t = 5)]
+    test_count: u8,
+}
+
+#[derive(serde::Serialize, Debug)]
+struct Record {
+    /// 时间戳
+    timestamp: chrono::DateTime<chrono::Local>,
+    /// 数据
+    data: u32,
+    /// 可选的标记
+    mark: Option<String>,
 }
 
 struct Motor {
@@ -70,21 +83,10 @@ impl Motor {
 async fn main() -> Result<()> {
     // 解析命令行参数
     let args = Args::parse();
-    assert!(args.channel <= 3, "错误：通道只能选择0, 1, 2, 3");
-
-    use ldc1614::Channel;
-    let real_channel: Channel;
-    match args.channel {
-        0 => real_channel = Channel::Zero,
-        1 => real_channel = Channel::One,
-        2 => real_channel = Channel::Two,
-        3 => real_channel = Channel::Three,
-        4_u8..=u8::MAX => todo!(),
-    }
 
     // 初始化日志
     use env_logger::Builder;
-    use log::debug;
+    use log::{debug, error, info};
     use std::str::FromStr;
     Builder::from_default_env()
         .filter(
@@ -93,6 +95,20 @@ async fn main() -> Result<()> {
                 .unwrap_or(log::LevelFilter::Debug),
         )
         .init();
+
+    debug!("初始化参数");
+    use ldc1614::Channel;
+    assert!(args.channel <= 3, "错误：通道只能选择0, 1, 2, 3");
+    let real_channel = match args.channel {
+        0 => Channel::Zero,
+        1 => Channel::One,
+        2 => Channel::Two,
+        3 => Channel::Three,
+        _ => {
+            assert!(args.channel <= 3, "错误：通道只能选择0, 1, 2, 3");
+            std::process::exit(1);
+        }
+    };
 
     debug!("初始化i2c设备");
     use rppal::i2c::I2c;
@@ -116,8 +132,10 @@ async fn main() -> Result<()> {
     use csv::Writer;
     use std::fs::File;
     // 获取当前时间并格式化为文件名
-    let timestamp = Local::now().format("%Y-%m-%d_%H-%M-%S").to_string();
-    let filename = format!("data_{}.csv", timestamp);
+    let filename = format!(
+        "data_{}.csv",
+        Local::now().format("%Y-%m-%d_%H-%M-%S").to_string()
+    );
 
     // 创建并打开 CSV 文件
     let file = File::create(&filename).unwrap();
@@ -126,30 +144,53 @@ async fn main() -> Result<()> {
     let mut wtr = Writer::from_writer(file);
 
     // 写入表头
-    wtr.write_record(&["timestamp", "data"]).unwrap();
+    wtr.write_record(&["timestamp", "data", "mark"]).unwrap();
+    use std::io;
+    let stdin = io::stdin();
+    let mut handle = stdin.lock();
 
     // 调用生成 PWM 信号的函数
     //频率为1000hz，占空比50%，细分度16，让滑轨前进10mm
     motor.moving(10.0).await.unwrap();
 
-    /*
     loop {
-        use std::{thread, time::Duration};
-        thread::sleep(Duration::from_millis(args.sample_time));
+        use std::io::BufRead;
+        let mut input = String::new();
+        match handle.read_line(&mut input) {
+            Err(e) => {
+                error!("错误的输入: {}", e);
+                continue;
+            }
+            _ => {}
+        }
+        let mark = match input.len() {
+            0 => None,
+            _ => Some(input),
+        };
 
-        let data = ldc.read_data(&mut i2c, real_channel).unwrap();
+        for _ in 0..args.test_count {
+            use std::{thread, time::Duration};
+            thread::sleep(Duration::from_millis(args.sample_time));
 
-        // 获取当前时间戳
-        let timestamp = Local::now().to_string();
-        // 写入数据行
-        wtr.write_record(&[timestamp, data.to_string()]).unwrap();
+            let data = ldc.read_data(&mut i2c, real_channel).unwrap();
+            // 写入数据行
+            wtr.serialize(Record {
+                timestamp: Local::now(),
+                data,
+                mark: mark.clone(),
+            })
+            .unwrap();
+        }
         wtr.flush().unwrap();
-        println!("Data has been written to {}", filename);
-        // println!(
-        //     "{}",
-        //     // ldc.read_data(&mut i2c, args.channel).unwrap()
-        // )
+
+        info!(
+            "数据写入完成到 {}，完成时间 {}{}",
+            filename,
+            Local::now().to_rfc3339(),
+            match mark {
+                None => "".to_string(),
+                Some(_) => format!("，标记为 {}", mark.unwrap()),
+            }
+        );
     }
-    */
-    Ok(())
 }

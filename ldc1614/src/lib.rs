@@ -6,6 +6,7 @@
 // #![no_std]
 // #![feature(const_float_bits_conv, const_fn_floating_point_arithmetic)]
 // use embedded_hal::i2c::blocking as i2c;
+#![allow(dead_code)]
 
 pub mod bitmap;
 mod interface;

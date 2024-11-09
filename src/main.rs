@@ -1,9 +1,4 @@
 use clap::Parser;
-<<<<<<< HEAD
-use rppal::gpio::{self, Gpio, OutputPin};
-
-=======
->>>>>>> origin/real-test
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
@@ -32,12 +27,12 @@ struct Record {
     data: u32,
     /// 可选的标记
     mark: Option<String>,
-<<<<<<< HEAD
 }
 
+use rppal::gpio;
 struct Motor {
-    pwm: OutputPin,
-    dir: OutputPin,
+    pwm: gpio::OutputPin,
+    dir: gpio::OutputPin,
 }
 
 #[derive(Debug)]
@@ -85,14 +80,6 @@ impl Motor {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // 解析命令行参数
-=======
-}
-
-#[tokio::main]
-async fn main() {
-    use ldc1614::Channel;
->>>>>>> origin/real-test
     let args = Args::parse();
 
     // 初始化日志
@@ -108,11 +95,8 @@ async fn main() {
         .init();
 
     debug!("初始化参数");
-<<<<<<< HEAD
     use ldc1614::Channel;
     assert!(args.channel <= 3, "错误：通道只能选择0, 1, 2, 3");
-=======
->>>>>>> origin/real-test
     let real_channel = match args.channel {
         0 => Channel::Zero,
         1 => Channel::One,
@@ -132,6 +116,7 @@ async fn main() {
     ldc.defaule_config(&mut i2c, real_channel).unwrap();
 
     debug!("初始化gpio");
+    use rppal::gpio::Gpio;
     let gpio = Gpio::new().unwrap();
     let pwm = gpio.get(21).unwrap().into_output_low();
     let dir = gpio.get(12).unwrap().into_output_high();
@@ -162,13 +147,10 @@ async fn main() {
     use std::io;
     let stdin = io::stdin();
     let mut handle = stdin.lock();
-<<<<<<< HEAD
 
     // 调用生成 PWM 信号的函数
     //频率为1000hz，占空比50%，细分度16，让滑轨前进10mm
     motor.moving(10.0).await.unwrap();
-=======
->>>>>>> origin/real-test
 
     loop {
         use std::io::BufRead;

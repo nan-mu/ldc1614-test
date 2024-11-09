@@ -1,6 +1,9 @@
-//! 用于测试ldc161x板子能否正常工作
-
 use clap::Parser;
+<<<<<<< HEAD
+use rppal::gpio::{self, Gpio, OutputPin};
+
+=======
+>>>>>>> origin/real-test
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
@@ -29,11 +32,67 @@ struct Record {
     data: u32,
     /// 可选的标记
     mark: Option<String>,
+<<<<<<< HEAD
+}
+
+struct Motor {
+    pwm: OutputPin,
+    dir: OutputPin,
+}
+
+#[derive(Debug)]
+enum Error {
+    Gpio(gpio::Error),
+}
+
+impl From<gpio::Error> for Error {
+    fn from(value: gpio::Error) -> Self {
+        Error::Gpio(value)
+    }
+}
+
+type Result<T> = core::result::Result<T, Error>;
+
+impl Motor {
+    /// GPIO模拟PWM输出
+    /// 首先说明电机的连接方式是共阴极连接，
+    /// ENA-、DIR-、PUL-接控制器的地，
+    /// ENA+接使能信号，DIR+接方向信号物理口32，PUL+接脉冲信号物理口40
+    /// * distance 电机运动距离（正数为正向移动）
+    async fn moving(&mut self, distance: f64) -> Result<()> {
+        use tokio::time::{self, Duration};
+        // 电机运动速度 (mm/s)= 脉冲频率 * 丝杆导程 * 电机旋转步长 / (编码器细分度 * 360°)
+        // > 滑轨每转的距离是1.0mm，步进电机在没有细分的情况下，电机每步进一次时的角度为1.8°
+        const SPEED: f64 = 1.5625;
+        // 启动 PWM 输出
+        self.pwm.set_pwm_frequency(5000.0, 0.5)?;
+        //设置方向引脚
+        match distance.is_sign_negative() {
+            true => {
+                self.dir.set_low();
+            }
+            false => {
+                self.dir.set_high();
+            }
+        }
+        // 异步等待滑轨前进指定距离
+        time::sleep(Duration::from_secs_f64(distance.abs() / SPEED)).await;
+        // 停止 PWM 输出
+        self.pwm.clear_pwm()?;
+        Ok(())
+    }
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    // 解析命令行参数
+=======
 }
 
 #[tokio::main]
 async fn main() {
     use ldc1614::Channel;
+>>>>>>> origin/real-test
     let args = Args::parse();
 
     // 初始化日志
@@ -49,6 +108,11 @@ async fn main() {
         .init();
 
     debug!("初始化参数");
+<<<<<<< HEAD
+    use ldc1614::Channel;
+    assert!(args.channel <= 3, "错误：通道只能选择0, 1, 2, 3");
+=======
+>>>>>>> origin/real-test
     let real_channel = match args.channel {
         0 => Channel::Zero,
         1 => Channel::One,
@@ -66,6 +130,12 @@ async fn main() {
     use ldc1614::Ldc;
     let ldc = Ldc::<0x2b>::new(&mut i2c);
     ldc.defaule_config(&mut i2c, real_channel).unwrap();
+
+    debug!("初始化gpio");
+    let gpio = Gpio::new().unwrap();
+    let pwm = gpio.get(21).unwrap().into_output_low();
+    let dir = gpio.get(12).unwrap().into_output_high();
+    let mut motor = Motor { pwm, dir };
 
     // debug!("连接数据库");
     // let client = redis::Client::open("redis://:mypassword@127.0.0.1/").unwrap();
@@ -92,6 +162,13 @@ async fn main() {
     use std::io;
     let stdin = io::stdin();
     let mut handle = stdin.lock();
+<<<<<<< HEAD
+
+    // 调用生成 PWM 信号的函数
+    //频率为1000hz，占空比50%，细分度16，让滑轨前进10mm
+    motor.moving(10.0).await.unwrap();
+=======
+>>>>>>> origin/real-test
 
     loop {
         use std::io::BufRead;

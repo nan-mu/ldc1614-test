@@ -14,19 +14,19 @@ redis:
 tasks:
   - registers:
       - field: "rcount"
-        value: 0x0488
+        value: 1160                # 原值: 0x0488
       - field: "offset"
-        value: 0
+        value: 0                   # 原值: 0
       - field: "settlecount"
-        value: 0x5a
+        value: 90                  # 原值: 0x5a
       - field: "fin_divider"
-        value: 0b1
+        value: 1                   # 原值: 0b1
       - field: "fref_divider"
-        value: 0b10
+        value: 2                   # 原值: 0b10
       - field: "deglitch"
-        value: 0b001
+        value: 1                   # 原值: 0b001
       - field: "LC_sensor_drive_current"
-        value: 0b11111
+        value: 31                  # 原值: 0b11111
     channel: 2
     count: 10
-    location: "0:100:200" // 毫米
+    location: "0:100:200" # 毫米

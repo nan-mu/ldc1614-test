@@ -51,11 +51,11 @@ impl Config {
 #[tokio::test]
 async fn test_yml() {
     use std::path::Path;
-    if !Path::new("task.yml").exists() {
+    if !Path::new("/workspaces/tasks.yml").exists() {
         panic!("配置文件不存在");
     }
 
-    match Config::read_config("task.yml") {
+    match Config::read_config("/workspaces/tasks.yml") {
         Ok(config) => {
             println!("{:?}", config);
             assert!(config.tasks.len() > 0, "任务列表不能为空");

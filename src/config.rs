@@ -2,8 +2,8 @@ use crate::Result;
 
 #[derive(Debug, serde::Deserialize, PartialEq, Eq, Clone)]
 pub struct Register {
-    field: String,
-    value: u32,
+    pub field: String,
+    pub value: u32,
 }
 
 #[derive(Debug, serde::Deserialize)]

@@ -9,6 +9,7 @@ pub struct Register {
 #[derive(Debug, serde::Deserialize)]
 pub struct Task {
     pub registers: Vec<Register>,
+    pub channel: u8,
     pub test_count: u32,
     pub test_location: Vec<f64>,
 }

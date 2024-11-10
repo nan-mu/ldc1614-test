@@ -39,10 +39,10 @@ impl Motor {
         //设置方向引脚
         match distance.is_sign_negative() {
             true => {
-                self.dir.set_low();
+                self.dir.set_high();
             }
             false => {
-                self.dir.set_high();
+                self.dir.set_low();
             }
         }
         // 异步等待滑轨前进指定距离
@@ -62,4 +62,7 @@ async fn test_goto() {
 
     motor.goto(15.0).await.unwrap();
     assert_eq!(motor.position, 15.0);
+
+    motor.goto(0.0).await.unwrap();
+    assert_eq!(motor.position, 0.0);
 }

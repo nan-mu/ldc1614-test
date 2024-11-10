@@ -151,78 +151,93 @@ async fn main() -> Result<()> {
     let stdin = io::stdin();
     let mut handle = stdin.lock();
 
-    // 调用生成 PWM 信号的函数
-    //频率为1000hz，占空比50%，细分度16，让滑轨前进10mm
-    motor.moving(10.0).await.unwrap();
-
     use functions;
-    use functions::{read_config, Config};
+    use functions::read_config;
     let config = read_config("tasks.yml");
     //计划把主函数的loop中的代码改为：
     //执行实验
+    let test_count: u32;
+    let test_location: Vec<f64>;
     match config {
         Ok(config) => {
-            let test_count = config.test_count;
-            let test_location = config.test_location;
+            test_count = config.test_count;
+            test_location = config.test_location;
             // 使用 test_count 和 test_location
         }
         Err(e) => {
             eprintln!("配置文件读取失败: {}", e);
+            test_location = Vec::new();
+            test_count = 0;
             // 可以选择退出或执行其他处理逻辑
         }
     }
-    loop {
-        test_location.iter().for_each(|distance| {
-            //调用配置寄存器的函数
 
-            for i in 0..test_count {
-                //调用电机移动函数
+    for distance in test_location.iter() {
+        //调用配置寄存器的函数
 
-                //将结果写入文件函数
+        //完成实验并写入实验数据
+        for i in 0..test_count {
+            // 调用电机移动函数
+            // 调用生成 PWM 信号的函数
+            // 频率为 1000hz，占空比 50%，细分度 16，让滑轨前进距离distance
+            motor.moving(*distance).await.unwrap();
 
-                //调用电机移动函数，将电机移回原位
-            }
-        });
-    }
-
-    loop {
-        use std::io::BufRead;
-        let mut input = String::new();
-        match handle.read_line(&mut input) {
-            Err(e) => {
-                error!("错误的输入: {}", e);
-                continue;
-            }
-            _ => {}
-        }
-        let mark = match input.len() {
-            0 => None,
-            _ => Some(input),
-        };
-
-        for _ in 0..args.test_count {
+            // 将结果写入文件函数
             use std::{thread, time::Duration};
             thread::sleep(Duration::from_millis(args.sample_time));
-
             let data = ldc.read_data(&mut i2c, real_channel).unwrap();
+            // 获取当前时间戳
+            let timestamp = Local::now().to_string();
             // 写入数据行
-            wtr.serialize(Record {
-                timestamp: Local::now(),
-                data,
-                mark: mark.clone(),
-            })
-            .unwrap();
-        }
-        wtr.flush().unwrap();
+            wtr.write_record(&[timestamp, data.to_string()]).unwrap();
+            wtr.flush().unwrap();
+            println!("Data has been written to {}", filename);
 
-        info!(
-            "数据写入完成到 {}，完成时间 {}{}",
-            filename,
-            Local::now().to_rfc3339(),
-            match mark {
-                None => "".to_string(),
-                Some(_) => format!("，标记为 {}", mark.unwrap()),
-            }
-        );
+            // 调用电机移动函数，将电机移回原位
+            motor.moving(-(*distance)).await.unwrap();
+        }
     }
+
+    Ok(())
 }
+
+// loop {
+//     use std::io::BufRead;
+//     let mut input = String::new();
+//     match handle.read_line(&mut input) {
+//         Err(e) => {
+//             error!("错误的输入: {}", e);
+//             continue;
+//         }
+//         _ => {}
+//     }
+//     let mark = match input.len() {
+//         0 => None,
+//         _ => Some(input),
+//     };
+
+//     for _ in 0..args.test_count {
+//         use std::{thread, time::Duration};
+//         thread::sleep(Duration::from_millis(args.sample_time));
+
+//         let data = ldc.read_data(&mut i2c, real_channel).unwrap();
+//         // 写入数据行
+//         wtr.serialize(Record {
+//             timestamp: Local::now(),
+//             data,
+//             mark: mark.clone(),
+//         })
+//         .unwrap();
+//     }
+//     wtr.flush().unwrap();
+
+//     info!(
+//         "数据写入完成到 {}，完成时间 {}{}",
+//         filename,
+//         Local::now().to_rfc3339(),
+//         match mark {
+//             None => "".to_string(),
+//             Some(_) => format!("，标记为 {}", mark.unwrap()),
+//         }
+//     );
+// }

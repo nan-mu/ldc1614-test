@@ -101,7 +101,7 @@ async fn main() -> Result<()> {
 
     debug!("读取配置文件");
     use config::Config;
-    let config = Config::read_config("tasks.yml").unwrap();
+    let config = Config::read_config("./tasks.yml").unwrap();
 
     debug!("初始化i2c设备");
     use ldc1614::Ldc;

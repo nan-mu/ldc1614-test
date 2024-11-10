@@ -41,7 +41,10 @@ impl Config {
         let file = File::open(path).expect("无法打开文件");
         let reader = BufReader::new(file);
         let deserializer = Deserializer::from_reader(reader);
-        Deserialize::deserialize(deserializer).map_err(|_| Error::ConfigError)
+        Deserialize::deserialize(deserializer).map_err(|e| {
+            log::error!("{:?}", e);
+            Error::ConfigError
+        })
     }
 }
 

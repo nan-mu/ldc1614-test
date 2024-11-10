@@ -27,7 +27,7 @@ tasks:
         value: 1
       - field: "deglitch"
         value: 0b001
-      - field: "idrive"
+      - field: "LC_sensor_drive_current"
         value: 0b11111
     channel: 2
     count: 10

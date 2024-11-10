@@ -1,11 +1,7 @@
 //! 包含从ldc1614::Ldc得到对应通道代码的结构。最后的形式是从一个tokio的广播结构发送数据
 
-use std::collections::HashMap;
-
 use super::{Error, Result};
 
-use chrono::Local;
-use serde::de::value;
 use tokio::sync::{self, broadcast};
 
 pub struct Channel<const ADDR: u8> {
@@ -35,6 +31,7 @@ impl<const ADDR: u8> Channel<ADDR> {
 
 impl<const ADDR: u8> Channel<ADDR> {
     pub async fn submit(&self, mark: Option<std::sync::Arc<str>>) -> Result<usize> {
+        use chrono::Local;
         let (ldc, mut i2c) = tokio::join!(self.ldc.lock(), self.i2c.lock());
         Ok(self.rx.send(crate::Record {
             timestamp: Local::now(),
@@ -101,12 +98,7 @@ impl<const ADDR: u8> Channel<ADDR> {
                 //0 0b10010
                 ldc.register.drive_currentx.0.write(
                     &mut *i2c,
-                    DRIVE_CURRENTx::sensor_current_drive.val(
-                        match register.get("SENSOR_CURRENT_DRIVE") {
-                            Some(&value) => value as usize,
-                            None => 0,
-                        },
-                    ) + DRIVE_CURRENTx::LC_sensor_drive_current.val(
+                    DRIVE_CURRENTx::LC_sensor_drive_current.val(
                         match register.get("LC_SENSOR_DRIVE_CURRENT") {
                             Some(&value) => value as usize,
                             None => 0b10010,
@@ -150,12 +142,7 @@ impl<const ADDR: u8> Channel<ADDR> {
                 //0 0b10010
                 ldc.register.drive_currentx.1.write(
                     &mut *i2c,
-                    DRIVE_CURRENTx::sensor_current_drive.val(
-                        match register.get("SENSOR_CURRENT_DRIVE") {
-                            Some(&value) => value as usize,
-                            None => 0,
-                        },
-                    ) + DRIVE_CURRENTx::LC_sensor_drive_current.val(
+                    DRIVE_CURRENTx::LC_sensor_drive_current.val(
                         match register.get("LC_SENSOR_DRIVE_CURRENT") {
                             Some(&value) => value as usize,
                             None => 0b10010,
@@ -199,10 +186,12 @@ impl<const ADDR: u8> Channel<ADDR> {
                 //0 0b10010
                 ldc.register.drive_currentx.2.write(
                     &mut *i2c,
-                    DRIVE_CURRENTx::LC_sensor_drive_current.val(match register.get("IDRIVE") {
-                        Some(&value) => value as usize,
-                        None => 0b10010,
-                    }),
+                    DRIVE_CURRENTx::LC_sensor_drive_current.val(
+                        match register.get("LC_sensor_drive_current") {
+                            Some(&value) => value as usize,
+                            None => 0b10010,
+                        },
+                    ),
                 );
             }
             Channel::Three => {
@@ -241,12 +230,7 @@ impl<const ADDR: u8> Channel<ADDR> {
                 //0 0b10010
                 ldc.register.drive_currentx.3.write(
                     &mut *i2c,
-                    DRIVE_CURRENTx::sensor_current_drive.val(
-                        match register.get("SENSOR_CURRENT_DRIVE") {
-                            Some(&value) => value as usize,
-                            None => 0,
-                        },
-                    ) + DRIVE_CURRENTx::LC_sensor_drive_current.val(
+                    DRIVE_CURRENTx::LC_sensor_drive_current.val(
                         match register.get("LC_SENSOR_DRIVE_CURRENT") {
                             Some(&value) => value as usize,
                             None => 0b10010,

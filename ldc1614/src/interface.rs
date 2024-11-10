@@ -67,13 +67,13 @@ where
         if REGISTER_ADDR < u8::MAX as u16 {
             read[0] = REGISTER_ADDR as u8;
             read[1..(1 + REGISTER_BYTE_LEN)]
-                .copy_from_slice(&field.value.into().to_be_bytes()[(8 - REGISTER_BYTE_LEN)..]);
+                .copy_from_slice(&field.value.into().to_le_bytes()[(8 - REGISTER_BYTE_LEN)..]);
         } else {
             register_len = 2;
             read[0] = (REGISTER_ADDR >> 8) as u8;
             read[1] = REGISTER_ADDR as u8;
             read[2..(2 + REGISTER_BYTE_LEN)]
-                .copy_from_slice(&field.value.into().to_be_bytes()[(8 - REGISTER_BYTE_LEN)..]);
+                .copy_from_slice(&field.value.into().to_le_bytes()[(8 - REGISTER_BYTE_LEN)..]);
         }
         // std::thread::sleep(std::time::Duration::from_secs(1));
         println!("{:?}", read);

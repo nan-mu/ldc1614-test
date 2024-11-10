@@ -5,13 +5,13 @@ use std::{
     path::Path,
     sync::{self, Arc},
 };
+
 #[derive(Debug)]
 enum Consumer {
     Redis { url: Arc<str> },
     Csv { address: Option<sync::Arc<Path>> },
 }
 
-use fred::prelude::TimeSeriesInterface;
 use ldc1614::Channel;
 use log::{debug, error, info, warn};
 use tokio::sync::broadcast;
@@ -121,6 +121,7 @@ impl Handler {
                     });
                 }
                 Consumer::Redis { url } => {
+                    debug!("初始化redis数据库");
                     use fred::{
                         interfaces::ClientLike,
                         types::{Builder, RedisConfig, RedisMap},
@@ -133,42 +134,49 @@ impl Handler {
 
                     // client.quit().await?; // 之后写信号捕捉的时候移过去
                     tokio::spawn(async move {
-                        while let Ok(record) = rx.recv().await {
-                            debug!("redis收到数据: {:?}", record);
-                            client
-                                .ts_add::<usize, &str, i64, RedisMap>(
-                                    match record.channel {
-                                        Channel::Zero => "Channel:0",
-                                        Channel::One => "Channel:1",
-                                        Channel::Two => "Channel:2",
-                                        Channel::Three => "Channel:3",
-                                    },
-                                    record.timestamp.timestamp(),
-                                    record.data as f64,
-                                    None,
-                                    None,
-                                    None,
-                                    None,
-                                    match &record.mark {
-                                        Some(mark) => mark
-                                            .lines()
-                                            .filter_map(|line| {
-                                                let mut parts = line.splitn(2, ',');
-                                                Some((
-                                                    parts.next()?.to_string(),
-                                                    parts.next()?.to_string(),
-                                                ))
-                                            })
-                                            .collect::<fred::types::RedisMap>(),
-                                        None => fred::types::RedisMap::new(),
-                                    },
-                                )
-                                .await
-                                .unwrap_or_else(|err| {
-                                    error!("写入redis失败, 数据为: {:?}, 错误: {:?}", record, err);
-                                    0
-                                });
+                        debug!("redis消费线程创建成功");
+                        loop {
+                            match rx.recv().await {
+                                Ok(record) => {
+                                    use fred::prelude::TimeSeriesInterface;
+                                    debug!("redis收到数据: {:?}", record);
+                                    let key = match record.channel {
+                                        Channel::Zero => "Channel0",
+                                        Channel::One => "Channel1",
+                                        Channel::Two => "Channel2",
+                                        Channel::Three => "Channel3",
+                                    };
+                                    let key = if let Some(ref string) = record.mark {
+                                        format!("{}:{}", key, string)
+                                    } else {
+                                        key.to_string()
+                                    };
+                                    client
+                                        .ts_add::<usize, String, i64, RedisMap>(
+                                            key,
+                                            record.timestamp.timestamp(),
+                                            record.data as f64,
+                                            None,
+                                            None,
+                                            None,
+                                            None,
+                                            fred::types::RedisMap::new(),
+                                        )
+                                        .await
+                                        .unwrap_or_else(|err| {
+                                            error!(
+                                                "写入redis失败, 数据为: {:?}, 错误: {:?}",
+                                                record, err
+                                            );
+                                            0
+                                        });
+                                }
+                                Err(e) => {
+                                    error!("redis消费错误: {:?}", e);
+                                }
+                            }
                         }
+                        // debug!("redis消费线程正在关闭");
                     });
                 }
             }
@@ -176,4 +184,50 @@ impl Handler {
 
         Ok(())
     }
+}
+
+#[tokio::test]
+async fn test_redis() {
+    use env_logger::Builder;
+    use log::debug;
+    Builder::from_default_env()
+        .filter(None, log::LevelFilter::Debug)
+        .init();
+
+    let (tx, rx) = tokio::sync::broadcast::channel(512);
+
+    //redis://username:password@foo.com:6379/1
+    let handler = Handler {
+        rx: vec![(
+            Consumer::Redis {
+                //这是开发容器的ip
+                url: "redis://:mypassword@172.19.0.2:6379".into(),
+            },
+            rx,
+        )],
+    };
+
+    handler.submit().await.unwrap();
+
+    use chrono::Local;
+    for _ in 0..60 {
+        debug!("数据发射");
+        tx.send(crate::Record {
+            timestamp: Local::now(),
+            data: 111,
+            channel: Channel::Zero,
+            mark: Some("test".into()),
+        })
+        .unwrap();
+        tx.send(crate::Record {
+            timestamp: Local::now(),
+            data: 111,
+            channel: Channel::Zero,
+            mark: Some("test:but will not be selected".into()),
+        })
+        .unwrap();
+    }
+
+    use std::time::Duration;
+    tokio::time::sleep(Duration::from_secs(5)).await;
 }

@@ -2,7 +2,6 @@
 
 mod channel;
 mod config;
-mod database;
 mod handler;
 mod motor;
 
@@ -56,11 +55,9 @@ enum Error {
     #[error("生产者无法获得i2c和ldc互斥锁")]
     ProducerJoinError,
     #[error("配置文件填写错误")]
-    ConfigErr,
+    ConfigError,
     #[error("数据库错误: {0}")]
     Database(#[from] fred::error::RedisError),
-    Gpio(gpio::Error),
-    ConfigError,
 }
 
 use tokio::sync::broadcast;
@@ -102,6 +99,9 @@ async fn main() -> Result<()> {
         }
     };
 
+    debug!("读取配置文件");
+    let config = config::read_config("tasks.yml").unwrap();
+
     debug!("初始化i2c设备");
     use rppal::i2c::I2c;
     let mut i2c: I2c = I2c::new().unwrap();
@@ -115,79 +115,51 @@ async fn main() -> Result<()> {
     let gpio = Gpio::new().unwrap();
     let pwm = gpio.get(21).unwrap().into_output_low();
     let dir = gpio.get(12).unwrap().into_output_high();
-    let mut motor = Motor { pwm, dir };
+    let mut motor = Motor::new(pwm, dir);
 
-    // debug!("连接数据库");
-    // let client = redis::Client::open("redis://:mypassword@127.0.0.1/").unwrap();
-    // let mut connect = client.get_multiplexed_tokio_connection().await.unwrap();
+    // //计划把主函数的loop中的代码改为：
+    // //执行实验
+    // let test_count: u32;
+    // let test_location: Vec<f64>;
+    // match config {
+    //     Ok(config) => {
+    //         test_count = config.test_count;
+    //         test_location = config.test_location;
+    //         // 使用 test_count 和 test_location
+    //     }
+    //     Err(e) => {
+    //         eprintln!("配置文件读取失败: {}", e);
+    //         test_location = Vec::new();
+    //         test_count = 0;
+    //         // 可以选择退出或执行其他处理逻辑
+    //     }
+    // }
 
-    //用于新建文件的库
-    use chrono::Local;
-    use csv::Writer;
-    use std::fs::File;
-    // 获取当前时间并格式化为文件名
-    let filename = format!(
-        "data_{}.csv",
-        Local::now().format("%Y-%m-%d_%H-%M-%S").to_string()
-    );
+    // for distance in test_location.iter() {
+    //     //调用配置寄存器的函数
 
-    // 创建并打开 CSV 文件
-    let file = File::create(&filename).unwrap();
+    //     //完成实验并写入实验数据
+    //     for i in 0..test_count {
+    //         // 调用电机移动函数
+    //         // 调用生成 PWM 信号的函数
+    //         // 频率为 1000hz，占空比 50%，细分度 16，让滑轨前进距离distance
+    //         motor.moving(*distance).await.unwrap();
 
-    // 创建 CSV 写入器
-    let mut wtr = Writer::from_writer(file);
+    //         // 将结果写入文件函数
+    //         use std::{thread, time::Duration};
+    //         thread::sleep(Duration::from_millis(args.sample_time));
+    //         let data = ldc.read_data(&mut i2c, real_channel).unwrap();
+    //         // 获取当前时间戳
+    //         let timestamp = Local::now().to_string();
+    //         // 写入数据行
+    //         wtr.write_record(&[timestamp, data.to_string()]).unwrap();
+    //         wtr.flush().unwrap();
+    //         println!("Data has been written to {}", filename);
 
-    // 写入表头
-    wtr.write_record(&["timestamp", "data", "mark"]).unwrap();
-    use std::io;
-    let stdin = io::stdin();
-    let mut handle = stdin.lock();
-
-    debug!("读取配置文件");
-    let config = config::read_config("tasks.yml").unwrap();
-    //计划把主函数的loop中的代码改为：
-    //执行实验
-    let test_count: u32;
-    let test_location: Vec<f64>;
-    match config {
-        Ok(config) => {
-            test_count = config.test_count;
-            test_location = config.test_location;
-            // 使用 test_count 和 test_location
-        }
-        Err(e) => {
-            eprintln!("配置文件读取失败: {}", e);
-            test_location = Vec::new();
-            test_count = 0;
-            // 可以选择退出或执行其他处理逻辑
-        }
-    }
-
-    for distance in test_location.iter() {
-        //调用配置寄存器的函数
-
-        //完成实验并写入实验数据
-        for i in 0..test_count {
-            // 调用电机移动函数
-            // 调用生成 PWM 信号的函数
-            // 频率为 1000hz，占空比 50%，细分度 16，让滑轨前进距离distance
-            motor.moving(*distance).await.unwrap();
-
-            // 将结果写入文件函数
-            use std::{thread, time::Duration};
-            thread::sleep(Duration::from_millis(args.sample_time));
-            let data = ldc.read_data(&mut i2c, real_channel).unwrap();
-            // 获取当前时间戳
-            let timestamp = Local::now().to_string();
-            // 写入数据行
-            wtr.write_record(&[timestamp, data.to_string()]).unwrap();
-            wtr.flush().unwrap();
-            println!("Data has been written to {}", filename);
-
-            // 调用电机移动函数，将电机移回原位
-            motor.moving(-(*distance)).await.unwrap();
-        }
-    }
+    //         // 调用电机移动函数，将电机移回原位
+    //         motor.moving(-(*distance)).await.unwrap();
+    //     }
+    // }
 
     Ok(())
 }

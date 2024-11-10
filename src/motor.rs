@@ -2,11 +2,15 @@ use super::Result;
 
 use rppal::gpio;
 pub struct Motor {
-    pub pwm: gpio::OutputPin,
-    pub dir: gpio::OutputPin,
+    pwm: gpio::OutputPin,
+    dir: gpio::OutputPin,
 }
 
 impl Motor {
+    pub fn new(pwm: gpio::OutputPin, dir: gpio::OutputPin) -> Self {
+        Motor { pwm, dir }
+    }
+
     /// GPIO模拟PWM输出
     /// 首先说明电机的连接方式是共阴极连接，
     /// ENA-、DIR-、PUL-接控制器的地，

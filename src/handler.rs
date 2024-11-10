@@ -7,9 +7,9 @@ use std::{
 };
 
 #[derive(Debug)]
-enum Consumer {
+pub enum Consumer {
     Redis { url: Arc<str> },
-    Csv { address: Option<sync::Arc<Path>> },
+    Csv { path: Option<sync::Arc<Path>> },
 }
 
 use ldc1614::Channel;
@@ -24,10 +24,10 @@ impl Handler {
     async fn submit(self) -> Result<()> {
         for (consumer, mut rx) in self.rx {
             match consumer {
-                Consumer::Csv { address } => {
+                Consumer::Csv { path } => {
                     debug!("读取csv文件");
                     use chrono::Local;
-                    let file = match address {
+                    let file = match path {
                         Some(path) => match path.extension() {
                             Some(ext) if ext == std::ffi::OsStr::new("csv") => {
                                 if path.exists() {
@@ -39,7 +39,7 @@ impl Handler {
                                 }
                             }
                             // 之后写解析配置文件的时候改一下
-                            _ => return Err(Error::ConfigErr),
+                            _ => return Err(Error::ConfigError),
                         },
                         None => {
                             let filename = format!(
@@ -80,7 +80,7 @@ impl Handler {
                             wtr
                         } else {
                             error!("无法读取csv文件");
-                            return Err(Error::ConfigErr);
+                            return Err(Error::ConfigError);
                         }
                     };
 

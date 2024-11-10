@@ -1,0 +1,31 @@
+# config.yml
+
+# CSV配置
+csv:
+  # path不填写时，会在运行文件夹下创建一个data_<时间>.csv文件
+  path: "/path/to/csv/file.csv"
+
+# Redis配置
+redis:
+  # TODO: 完善redis细致配置
+  url: "redis://username:password@hostname:port/db"
+
+# 任务列表
+tasks:
+  - registers:
+      - field: "register1"
+        value: 123
+      - field: "register2"
+        value: 456
+    channel: 1
+    count: 10
+    location: "location1"
+
+  - registers:
+      - field: "register3"
+        value: 789
+      - field: "register4"
+        value: 101112
+    channel: 2
+    count: 20
+    location: "location2"

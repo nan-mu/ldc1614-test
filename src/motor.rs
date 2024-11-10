@@ -52,3 +52,36 @@ impl Motor {
         Ok(())
     }
 }
+
+#[tokio::test]
+async fn test_goto() {
+    let gpio = gpio::Gpio::new().unwrap();
+    let pwm_pin = gpio.get(18).unwrap().into_output();
+    let dir_pin = gpio.get(23).unwrap().into_output();
+    let mut motor = Motor::new(pwm_pin, dir_pin);
+
+    loop {
+        print!("请输入目标距离: ");
+        use std::io::{self, Write};
+        io::stdout().flush().unwrap();
+
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).unwrap();
+        let distance: f64 = match input.trim().parse() {
+            Ok(num) => num,
+            Err(_) => {
+                println!("无效的输入，请输入一个数字");
+                continue;
+            }
+        };
+
+        motor.goto(distance).await.unwrap();
+        println!("电机已移动到位置: {}", motor.position);
+    }
+
+    // motor.goto(15.0).await.unwrap();
+    // assert_eq!(motor.position, 15.0);
+
+    // motor.goto(-10.0).await.unwrap();
+    // assert_eq!(motor.position, -10.0);
+}

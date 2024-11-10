@@ -1,3 +1,5 @@
+pub mod functions;
+
 use clap::Parser;
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -29,6 +31,7 @@ struct Record {
     mark: Option<String>,
 }
 
+use ldc1614::Config;
 use rppal::gpio;
 struct Motor {
     pwm: gpio::OutputPin,
@@ -151,6 +154,36 @@ async fn main() -> Result<()> {
     // 调用生成 PWM 信号的函数
     //频率为1000hz，占空比50%，细分度16，让滑轨前进10mm
     motor.moving(10.0).await.unwrap();
+
+    use functions;
+    use functions::{read_config, Config};
+    let config = read_config("tasks.yml");
+    //计划把主函数的loop中的代码改为：
+    //执行实验
+    match config {
+        Ok(config) => {
+            let test_count = config.test_count;
+            let test_location = config.test_location;
+            // 使用 test_count 和 test_location
+        }
+        Err(e) => {
+            eprintln!("配置文件读取失败: {}", e);
+            // 可以选择退出或执行其他处理逻辑
+        }
+    }
+    loop {
+        test_location.iter().for_each(|distance| {
+            //调用配置寄存器的函数
+
+            for i in 0..test_count {
+                //调用电机移动函数
+
+                //将结果写入文件函数
+
+                //调用电机移动函数，将电机移回原位
+            }
+        });
+    }
 
     loop {
         use std::io::BufRead;

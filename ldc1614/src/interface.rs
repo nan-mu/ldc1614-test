@@ -76,7 +76,7 @@ where
                 .copy_from_slice(&field.value.into().to_be_bytes()[(8 - REGISTER_BYTE_LEN)..]);
         }
         // std::thread::sleep(std::time::Duration::from_secs(1));
-
+        println!("{:?}", read);
         i2c.write(
             self.slave_address,
             &read[..(register_len + REGISTER_BYTE_LEN)],

@@ -1,4 +1,5 @@
-pub mod functions;
+mod config;
+mod motor;
 
 use clap::Parser;
 #[derive(Parser, Debug)]
@@ -31,16 +32,12 @@ struct Record {
     mark: Option<String>,
 }
 
-use ldc1614::Config;
 use rppal::gpio;
-struct Motor {
-    pwm: gpio::OutputPin,
-    dir: gpio::OutputPin,
-}
 
 #[derive(Debug)]
 enum Error {
     Gpio(gpio::Error),
+    ConfigError,
 }
 
 impl From<gpio::Error> for Error {
@@ -51,43 +48,13 @@ impl From<gpio::Error> for Error {
 
 type Result<T> = core::result::Result<T, Error>;
 
-impl Motor {
-    /// GPIO模拟PWM输出
-    /// 首先说明电机的连接方式是共阴极连接，
-    /// ENA-、DIR-、PUL-接控制器的地，
-    /// ENA+接使能信号，DIR+接方向信号物理口32，PUL+接脉冲信号物理口40
-    /// * distance 电机运动距离（正数为正向移动）
-    async fn moving(&mut self, distance: f64) -> Result<()> {
-        use tokio::time::{self, Duration};
-        // 电机运动速度 (mm/s)= 脉冲频率 * 丝杆导程 * 电机旋转步长 / (编码器细分度 * 360°)
-        // > 滑轨每转的距离是1.0mm，步进电机在没有细分的情况下，电机每步进一次时的角度为1.8°
-        const SPEED: f64 = 1.5625;
-        // 启动 PWM 输出
-        self.pwm.set_pwm_frequency(5000.0, 0.5)?;
-        //设置方向引脚
-        match distance.is_sign_negative() {
-            true => {
-                self.dir.set_low();
-            }
-            false => {
-                self.dir.set_high();
-            }
-        }
-        // 异步等待滑轨前进指定距离
-        time::sleep(Duration::from_secs_f64(distance.abs() / SPEED)).await;
-        // 停止 PWM 输出
-        self.pwm.clear_pwm()?;
-        Ok(())
-    }
-}
-
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
 
     // 初始化日志
     use env_logger::Builder;
-    use log::{debug, error, info};
+    use log::debug;
     use std::str::FromStr;
     Builder::from_default_env()
         .filter(
@@ -119,6 +86,7 @@ async fn main() -> Result<()> {
     ldc.defaule_config(&mut i2c, real_channel).unwrap();
 
     debug!("初始化gpio");
+    use motor::Motor;
     use rppal::gpio::Gpio;
     let gpio = Gpio::new().unwrap();
     let pwm = gpio.get(21).unwrap().into_output_low();
@@ -151,9 +119,8 @@ async fn main() -> Result<()> {
     let stdin = io::stdin();
     let mut handle = stdin.lock();
 
-    use functions;
-    use functions::read_config;
-    let config = read_config("tasks.yml");
+    debug!("读取配置文件");
+    let config = config::read_config("tasks.yml").unwrap();
     //计划把主函数的loop中的代码改为：
     //执行实验
     let test_count: u32;

@@ -62,22 +62,10 @@ impl<const ADDR: u8> Channel<ADDR> {
             .reset_dev
             .write(&mut *i2c, RESET_DEV::device_reset::reset);
 
-        ldc.register.config.write(
-            &mut *i2c,
-            CONFIG::high_current_sensor_drive::normal
-                + CONFIG::INTB_asserted::enable
-                + CONFIG::select_reference_frequency_source::internal_oscillator
-                + CONFIG::automatic_sensor_amplitude_correction::disable
-                + CONFIG::sensor_activation_mode::low
-                + CONFIG::sensor_rp_override::off
-                + CONFIG::sleep_mode::sleep
-                + match self.channel {
-                    Channel::Zero => CONFIG::active_channel::channel0,
-                    Channel::One => CONFIG::active_channel::channel1,
-                    Channel::Two => CONFIG::active_channel::channel2,
-                    Channel::Three => CONFIG::active_channel::channel3,
-                },
-        );
+        ldc.register
+            .config
+            .write(&mut *i2c, CONFIG::sleep_mode::sleep);
+
         match self.channel {
             Channel::Zero => {
                 ldc.register.rcountx.0.write(

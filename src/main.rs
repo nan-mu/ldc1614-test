@@ -104,12 +104,16 @@ async fn main() -> Result<()> {
     let config = Config::read_config("./tasks.yml").unwrap();
 
     debug!("初始化i2c设备");
-    use ldc1614::Ldc;
+    use ldc1614::{bitmap::MANUFCTURER_ID, Ldc};
     use rppal::i2c::I2c;
     use tokio::sync::Mutex;
     let mut i2c: I2c = I2c::new().unwrap();
     let ldc = Ldc::<0x2b>::new(&mut i2c);
-    ldc.defaule_config(&mut i2c, real_channel).unwrap();
+    let manufcturer_id = ldc
+        .register
+        .manufcturer_id
+        .read(&mut i2c, MANUFCTURER_ID::manufcturer_id);
+    debug!("制造商id: {}", manufcturer_id);
     let ldc = Arc::new(Mutex::new(ldc));
     let i2c = Arc::new(Mutex::new(i2c));
 

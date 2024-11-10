@@ -50,6 +50,7 @@ pub struct LdcRegister {
         ReadWriteLdc<DRIVE_CURRENTx::Register, 0x1e>,
         ReadWriteLdc<DRIVE_CURRENTx::Register, 0x1e>,
     ),
+    pub manufcturer_id: ReadOnlyLdc<MANUFCTURER_ID::Register, 0x7e>,
 }
 
 impl LdcRegister {
@@ -98,6 +99,7 @@ impl LdcRegister {
                 ReadWriteI2cRegister::new(addr),
                 ReadWriteI2cRegister::new(addr),
             ),
+            manufcturer_id: ReadOnlyI2cRegister::new(addr),
         }
     }
 }
@@ -292,6 +294,9 @@ tock_registers::register_bitfields![
     pub DRIVE_CURRENTx [
         sensor_current_drive OFFSET(6) NUMBITS(5) [],
         LC_sensor_drive_current OFFSET(0) NUMBITS(5) [],
+    ],
+    pub MANUFCTURER_ID [
+        manufcturer_id OFFSET(0) NUMBITS(16) [],
     ],
 ];
 

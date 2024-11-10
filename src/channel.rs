@@ -1,5 +1,7 @@
 //! 包含从ldc1614::Ldc得到对应通道代码的结构。最后的形式是从一个tokio的广播结构发送数据
 
+use std::collections::HashMap;
+
 use super::{Error, Result};
 
 use chrono::Local;
@@ -51,101 +53,211 @@ impl<const ADDR: u8> Channel<ADDR> {
             Channel,
         };
 
+        use std::collections::HashMap;
+        let register: HashMap<_, _> = register
+            .into_iter()
+            .map(|config::Register { field, value }| (field, value))
+            .collect();
+
         let (ldc, mut i2c) = tokio::join!(self.ldc.lock(), self.i2c.lock());
         ldc.register
             .reset_dev
             .write(&mut *i2c, RESET_DEV::device_reset::reset);
         match self.channel {
             Channel::Zero => {
-                ldc.register
-                    .rcountx
-                    .0
-                    .write(&mut *i2c, RCOUNTx::rcount.val(0x04d6));
-                ldc.register
-                    .offsetx
-                    .0
-                    .write(&mut *i2c, OFFSETx::offset.val(0x0000));
-                ldc.register
-                    .settlecountx
-                    .0
-                    .write(&mut *i2c, SETTLECOUNTx::settlecount.val(0x000a));
+                ldc.register.rcountx.0.write(
+                    &mut *i2c,
+                    RCOUNTx::rcount.val(match register.get("RCOUNT") {
+                        Some(&value) => value as usize,
+                        None => 0x04d6,
+                    }),
+                );
+                ldc.register.offsetx.0.write(
+                    &mut *i2c,
+                    OFFSETx::offset.val(match register.get("OFFSET") {
+                        Some(&value) => value as usize,
+                        None => 0x0000,
+                    }),
+                );
+                ldc.register.settlecountx.0.write(
+                    &mut *i2c,
+                    SETTLECOUNTx::settlecount.val(match register.get("SETTLECOUNT") {
+                        Some(&value) => value as usize,
+                        None => 0x000a,
+                    }),
+                );
+
                 ldc.register.clock_dividersx.0.write(
                     &mut *i2c,
-                    CLOCK_DIVIDERSx::fref_divider.val(2) + CLOCK_DIVIDERSx::fin_divider.val(1),
+                    CLOCK_DIVIDERSx::fref_divider.val(match register.get("FREF_DIVIDERS") {
+                        Some(&value) => value as usize,
+                        None => 2,
+                    }) + CLOCK_DIVIDERSx::fin_divider.val(match register.get("FIN_DIVIDERS") {
+                        Some(&value) => value as usize,
+                        None => 1,
+                    }),
                 );
+                //0 0b10010
                 ldc.register.drive_currentx.0.write(
                     &mut *i2c,
-                    DRIVE_CURRENTx::sensor_current_drive.val(0)
-                        + DRIVE_CURRENTx::LC_sensor_drive_current.val(0b10010),
+                    DRIVE_CURRENTx::sensor_current_drive.val(
+                        match register.get("SENSOR_CURRENT_DRIVE") {
+                            Some(&value) => value as usize,
+                            None => 0,
+                        },
+                    ) + DRIVE_CURRENTx::LC_sensor_drive_current.val(
+                        match register.get("LC_SENSOR_DRIVE_CURRENT") {
+                            Some(&value) => value as usize,
+                            None => 0b10010,
+                        },
+                    ),
                 );
             }
             Channel::One => {
-                ldc.register
-                    .rcountx
-                    .1
-                    .write(&mut *i2c, RCOUNTx::rcount.val(0x04d6));
-                ldc.register
-                    .offsetx
-                    .1
-                    .write(&mut *i2c, OFFSETx::offset.val(0x0000));
-                ldc.register
-                    .settlecountx
-                    .1
-                    .write(&mut *i2c, SETTLECOUNTx::settlecount.val(0x000a));
+                ldc.register.rcountx.1.write(
+                    &mut *i2c,
+                    RCOUNTx::rcount.val(match register.get("RCOUNT") {
+                        Some(&value) => value as usize,
+                        None => 0x04d6,
+                    }),
+                );
+                ldc.register.offsetx.1.write(
+                    &mut *i2c,
+                    OFFSETx::offset.val(match register.get("OFFSET") {
+                        Some(&value) => value as usize,
+                        None => 0x0000,
+                    }),
+                );
+                ldc.register.settlecountx.1.write(
+                    &mut *i2c,
+                    SETTLECOUNTx::settlecount.val(match register.get("SETTLECOUNT") {
+                        Some(&value) => value as usize,
+                        None => 0x000a,
+                    }),
+                );
+
                 ldc.register.clock_dividersx.1.write(
                     &mut *i2c,
-                    CLOCK_DIVIDERSx::fref_divider.val(2) + CLOCK_DIVIDERSx::fin_divider.val(1),
+                    CLOCK_DIVIDERSx::fref_divider.val(match register.get("FREF_DIVIDERS") {
+                        Some(&value) => value as usize,
+                        None => 2,
+                    }) + CLOCK_DIVIDERSx::fin_divider.val(match register.get("FIN_DIVIDERS") {
+                        Some(&value) => value as usize,
+                        None => 1,
+                    }),
                 );
+                //0 0b10010
                 ldc.register.drive_currentx.1.write(
                     &mut *i2c,
-                    DRIVE_CURRENTx::sensor_current_drive.val(0)
-                        + DRIVE_CURRENTx::LC_sensor_drive_current.val(0b10010),
+                    DRIVE_CURRENTx::sensor_current_drive.val(
+                        match register.get("SENSOR_CURRENT_DRIVE") {
+                            Some(&value) => value as usize,
+                            None => 0,
+                        },
+                    ) + DRIVE_CURRENTx::LC_sensor_drive_current.val(
+                        match register.get("LC_SENSOR_DRIVE_CURRENT") {
+                            Some(&value) => value as usize,
+                            None => 0b10010,
+                        },
+                    ),
                 );
             }
             Channel::Two => {
-                ldc.register
-                    .rcountx
-                    .2
-                    .write(&mut *i2c, RCOUNTx::rcount.val(0x04d6));
-                ldc.register
-                    .offsetx
-                    .2
-                    .write(&mut *i2c, OFFSETx::offset.val(0x0000));
-                ldc.register
-                    .settlecountx
-                    .2
-                    .write(&mut *i2c, SETTLECOUNTx::settlecount.val(0x000a));
+                ldc.register.rcountx.2.write(
+                    &mut *i2c,
+                    RCOUNTx::rcount.val(match register.get("RCOUNT") {
+                        Some(&value) => value as usize,
+                        None => 0x04d6,
+                    }),
+                );
+                ldc.register.offsetx.2.write(
+                    &mut *i2c,
+                    OFFSETx::offset.val(match register.get("OFFSET") {
+                        Some(&value) => value as usize,
+                        None => 0x0000,
+                    }),
+                );
+                ldc.register.settlecountx.2.write(
+                    &mut *i2c,
+                    SETTLECOUNTx::settlecount.val(match register.get("SETTLECOUNT") {
+                        Some(&value) => value as usize,
+                        None => 0x000a,
+                    }),
+                );
+
                 ldc.register.clock_dividersx.2.write(
                     &mut *i2c,
-                    CLOCK_DIVIDERSx::fref_divider.val(2) + CLOCK_DIVIDERSx::fin_divider.val(1),
+                    CLOCK_DIVIDERSx::fref_divider.val(match register.get("FREF_DIVIDERS") {
+                        Some(&value) => value as usize,
+                        None => 2,
+                    }) + CLOCK_DIVIDERSx::fin_divider.val(match register.get("FIN_DIVIDERS") {
+                        Some(&value) => value as usize,
+                        None => 1,
+                    }),
                 );
+                //0 0b10010
                 ldc.register.drive_currentx.2.write(
                     &mut *i2c,
-                    DRIVE_CURRENTx::sensor_current_drive.val(0)
-                        + DRIVE_CURRENTx::LC_sensor_drive_current.val(0b10010),
+                    DRIVE_CURRENTx::sensor_current_drive.val(
+                        match register.get("SENSOR_CURRENT_DRIVE") {
+                            Some(&value) => value as usize,
+                            None => 0,
+                        },
+                    ) + DRIVE_CURRENTx::LC_sensor_drive_current.val(
+                        match register.get("LC_SENSOR_DRIVE_CURRENT") {
+                            Some(&value) => value as usize,
+                            None => 0b10010,
+                        },
+                    ),
                 );
             }
             Channel::Three => {
-                ldc.register
-                    .rcountx
-                    .3
-                    .write(&mut *i2c, RCOUNTx::rcount.val(0x04d6));
-                ldc.register
-                    .offsetx
-                    .3
-                    .write(&mut *i2c, OFFSETx::offset.val(0x0000));
-                ldc.register
-                    .settlecountx
-                    .3
-                    .write(&mut *i2c, SETTLECOUNTx::settlecount.val(0x000a));
+                ldc.register.rcountx.3.write(
+                    &mut *i2c,
+                    RCOUNTx::rcount.val(match register.get("RCOUNT") {
+                        Some(&value) => value as usize,
+                        None => 0x04d6,
+                    }),
+                );
+                ldc.register.offsetx.3.write(
+                    &mut *i2c,
+                    OFFSETx::offset.val(match register.get("OFFSET") {
+                        Some(&value) => value as usize,
+                        None => 0x0000,
+                    }),
+                );
+                ldc.register.settlecountx.3.write(
+                    &mut *i2c,
+                    SETTLECOUNTx::settlecount.val(match register.get("SETTLECOUNT") {
+                        Some(&value) => value as usize,
+                        None => 0x000a,
+                    }),
+                );
+
                 ldc.register.clock_dividersx.3.write(
                     &mut *i2c,
-                    CLOCK_DIVIDERSx::fref_divider.val(2) + CLOCK_DIVIDERSx::fin_divider.val(1),
+                    CLOCK_DIVIDERSx::fref_divider.val(match register.get("FREF_DIVIDERS") {
+                        Some(&value) => value as usize,
+                        None => 2,
+                    }) + CLOCK_DIVIDERSx::fin_divider.val(match register.get("FIN_DIVIDERS") {
+                        Some(&value) => value as usize,
+                        None => 1,
+                    }),
                 );
+                //0 0b10010
                 ldc.register.drive_currentx.3.write(
                     &mut *i2c,
-                    DRIVE_CURRENTx::sensor_current_drive.val(0)
-                        + DRIVE_CURRENTx::LC_sensor_drive_current.val(0b10010),
+                    DRIVE_CURRENTx::sensor_current_drive.val(
+                        match register.get("SENSOR_CURRENT_DRIVE") {
+                            Some(&value) => value as usize,
+                            None => 0,
+                        },
+                    ) + DRIVE_CURRENTx::LC_sensor_drive_current.val(
+                        match register.get("LC_SENSOR_DRIVE_CURRENT") {
+                            Some(&value) => value as usize,
+                            None => 0b10010,
+                        },
+                    ),
                 );
             }
         }

@@ -1,8 +1,10 @@
 //! 自动化测试ldc1614
 
 mod channel;
+mod config;
 mod database;
 mod handler;
+mod motor;
 
 use clap::Parser;
 #[derive(Parser, Debug)]
@@ -40,10 +42,6 @@ struct Record {
 }
 
 use rppal::gpio;
-struct Motor {
-    pwm: gpio::OutputPin,
-    dir: gpio::OutputPin,
-}
 
 use thiserror::Error;
 
@@ -61,6 +59,8 @@ enum Error {
     ConfigErr,
     #[error("数据库错误: {0}")]
     Database(#[from] fred::error::RedisError),
+    Gpio(gpio::Error),
+    ConfigError,
 }
 
 use tokio::sync::broadcast;
@@ -71,36 +71,6 @@ impl From<broadcast::error::SendError<Record>> for Error {
 }
 
 type Result<T> = core::result::Result<T, Error>;
-
-impl Motor {
-    /// GPIO模拟PWM输出
-    /// 首先说明电机的连接方式是共阴极连接，
-    /// ENA-、DIR-、PUL-接控制器的地，
-    /// ENA+接使能信号，DIR+接方向信号物理口32，PUL+接脉冲信号物理口40
-    /// * distance 电机运动距离（正数为正向移动）
-    async fn moving(&mut self, distance: f64) -> Result<()> {
-        use tokio::time::{self, Duration};
-        // 电机运动速度 (mm/s)= 脉冲频率 * 丝杆导程 * 电机旋转步长 / (编码器细分度 * 360°)
-        // > 滑轨每转的距离是1.0mm，步进电机在没有细分的情况下，电机每步进一次时的角度为1.8°
-        const SPEED: f64 = 1.5625;
-        // 启动 PWM 输出
-        self.pwm.set_pwm_frequency(5000.0, 0.5)?;
-        //设置方向引脚
-        match distance.is_sign_negative() {
-            true => {
-                self.dir.set_low();
-            }
-            false => {
-                self.dir.set_high();
-            }
-        }
-        // 异步等待滑轨前进指定距离
-        time::sleep(Duration::from_secs_f64(distance.abs() / SPEED)).await;
-        // 停止 PWM 输出
-        self.pwm.clear_pwm()?;
-        Ok(())
-    }
-}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -140,54 +110,125 @@ async fn main() -> Result<()> {
     ldc.defaule_config(&mut i2c, real_channel).unwrap();
 
     debug!("初始化gpio");
+    use motor::Motor;
     use rppal::gpio::Gpio;
     let gpio = Gpio::new().unwrap();
     let pwm = gpio.get(21).unwrap().into_output_low();
     let dir = gpio.get(12).unwrap().into_output_high();
     let mut motor = Motor { pwm, dir };
 
-    // 调用生成 PWM 信号的函数
-    //频率为1000hz，占空比50%，细分度16，让滑轨前进10mm
-    motor.moving(10.0).await.unwrap();
+    // debug!("连接数据库");
+    // let client = redis::Client::open("redis://:mypassword@127.0.0.1/").unwrap();
+    // let mut connect = client.get_multiplexed_tokio_connection().await.unwrap();
 
-    loop {
-        // use std::io::BufRead;
-        // let mut input = String::new();
-        // match handle.read_line(&mut input) {
-        //     Err(e) => {
-        //         error!("错误的输入: {}", e);
-        //         continue;
-        //     }
-        //     _ => {}
-        // }
-        // let mark = match input.len() {
-        //     0 => None,
-        //     _ => Some(input),
-        // };
+    //用于新建文件的库
+    use chrono::Local;
+    use csv::Writer;
+    use std::fs::File;
+    // 获取当前时间并格式化为文件名
+    let filename = format!(
+        "data_{}.csv",
+        Local::now().format("%Y-%m-%d_%H-%M-%S").to_string()
+    );
 
-        // for _ in 0..args.test_count {
-        //     use std::{thread, time::Duration};
-        //     thread::sleep(Duration::from_millis(args.sample_time));
+    // 创建并打开 CSV 文件
+    let file = File::create(&filename).unwrap();
 
-        //     let data = ldc.read_data(&mut i2c, real_channel).unwrap();
-        //     // 写入数据行
-        //     wtr.serialize(Record {
-        //         timestamp: Local::now(),
-        //         data,
-        //         mark: Cow::Borrowed(mark),
-        //     })
-        //     .unwrap();
-        // }
-        // wtr.flush().unwrap();
+    // 创建 CSV 写入器
+    let mut wtr = Writer::from_writer(file);
 
-        // info!(
-        //     "数据写入完成到 {}，完成时间 {}{}",
-        //     filename,
-        //     Local::now().to_rfc3339(),
-        //     match mark {
-        //         None => "".to_string(),
-        //         Some(_) => format!("，标记为 {}", mark.unwrap()),
-        //     }
-        // );
+    // 写入表头
+    wtr.write_record(&["timestamp", "data", "mark"]).unwrap();
+    use std::io;
+    let stdin = io::stdin();
+    let mut handle = stdin.lock();
+
+    debug!("读取配置文件");
+    let config = config::read_config("tasks.yml").unwrap();
+    //计划把主函数的loop中的代码改为：
+    //执行实验
+    let test_count: u32;
+    let test_location: Vec<f64>;
+    match config {
+        Ok(config) => {
+            test_count = config.test_count;
+            test_location = config.test_location;
+            // 使用 test_count 和 test_location
+        }
+        Err(e) => {
+            eprintln!("配置文件读取失败: {}", e);
+            test_location = Vec::new();
+            test_count = 0;
+            // 可以选择退出或执行其他处理逻辑
+        }
     }
+
+    for distance in test_location.iter() {
+        //调用配置寄存器的函数
+
+        //完成实验并写入实验数据
+        for i in 0..test_count {
+            // 调用电机移动函数
+            // 调用生成 PWM 信号的函数
+            // 频率为 1000hz，占空比 50%，细分度 16，让滑轨前进距离distance
+            motor.moving(*distance).await.unwrap();
+
+            // 将结果写入文件函数
+            use std::{thread, time::Duration};
+            thread::sleep(Duration::from_millis(args.sample_time));
+            let data = ldc.read_data(&mut i2c, real_channel).unwrap();
+            // 获取当前时间戳
+            let timestamp = Local::now().to_string();
+            // 写入数据行
+            wtr.write_record(&[timestamp, data.to_string()]).unwrap();
+            wtr.flush().unwrap();
+            println!("Data has been written to {}", filename);
+
+            // 调用电机移动函数，将电机移回原位
+            motor.moving(-(*distance)).await.unwrap();
+        }
+    }
+
+    Ok(())
 }
+
+// loop {
+//     use std::io::BufRead;
+//     let mut input = String::new();
+//     match handle.read_line(&mut input) {
+//         Err(e) => {
+//             error!("错误的输入: {}", e);
+//             continue;
+//         }
+//         _ => {}
+//     }
+//     let mark = match input.len() {
+//         0 => None,
+//         _ => Some(input),
+//     };
+
+//     for _ in 0..args.test_count {
+//         use std::{thread, time::Duration};
+//         thread::sleep(Duration::from_millis(args.sample_time));
+
+//         let data = ldc.read_data(&mut i2c, real_channel).unwrap();
+//         // 写入数据行
+//         wtr.serialize(Record {
+//             timestamp: Local::now(),
+//             data,
+//             mark: mark.clone(),
+//         })
+//         .unwrap();
+//     }
+//     wtr.flush().unwrap();
+
+//     info!(
+//         "数据写入完成到 {}，完成时间 {}{}",
+//         filename,
+//         Local::now().to_rfc3339(),
+//         match mark {
+//             None => "".to_string(),
+//             Some(_) => format!("，标记为 {}", mark.unwrap()),
+//         }
+//     );
+// }

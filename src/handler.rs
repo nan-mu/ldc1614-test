@@ -16,8 +16,8 @@ use ldc1614::Channel;
 use log::{debug, error, info, warn};
 use tokio::sync::broadcast;
 #[derive(Debug)]
-struct Handler {
-    rx: Vec<(Consumer, broadcast::Receiver<super::Record>)>,
+pub struct Handler {
+    pub rx: Vec<(Consumer, broadcast::Receiver<super::Record>)>,
 }
 
 impl Handler {

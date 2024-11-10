@@ -45,7 +45,7 @@ use rppal::gpio;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-enum Error {
+pub enum Error {
     #[error("gpio使用错误: {0}")]
     Gpio(#[from] gpio::Error),
     #[error("ldc1614错误")]
@@ -100,7 +100,8 @@ async fn main() -> Result<()> {
     };
 
     debug!("读取配置文件");
-    let config = config::read_config("tasks.yml").unwrap();
+    use config::Config;
+    let config = Config::read_config("tasks.yml").unwrap();
 
     debug!("初始化i2c设备");
     use rppal::i2c::I2c;

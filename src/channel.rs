@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use super::{Error, Result};
 
 use chrono::Local;
+use serde::de::value;
 use tokio::sync::{self, broadcast};
 
 pub struct Channel<const ADDR: u8> {
@@ -56,7 +57,7 @@ impl<const ADDR: u8> Channel<ADDR> {
         use std::collections::HashMap;
         let register: HashMap<_, _> = register
             .into_iter()
-            .map(|config::Register { field, value }| (field, value))
+            .map(|config::Register { field, value }| (field.to_uppercase(), value))
             .collect();
 
         let (ldc, mut i2c) = tokio::join!(self.ldc.lock(), self.i2c.lock());
@@ -198,17 +199,10 @@ impl<const ADDR: u8> Channel<ADDR> {
                 //0 0b10010
                 ldc.register.drive_currentx.2.write(
                     &mut *i2c,
-                    DRIVE_CURRENTx::sensor_current_drive.val(
-                        match register.get("SENSOR_CURRENT_DRIVE") {
-                            Some(&value) => value as usize,
-                            None => 0,
-                        },
-                    ) + DRIVE_CURRENTx::LC_sensor_drive_current.val(
-                        match register.get("LC_SENSOR_DRIVE_CURRENT") {
-                            Some(&value) => value as usize,
-                            None => 0b10010,
-                        },
-                    ),
+                    DRIVE_CURRENTx::LC_sensor_drive_current.val(match register.get("IDRIVE") {
+                        Some(&value) => value as usize,
+                        None => 0b10010,
+                    }),
                 );
             }
             Channel::Three => {
@@ -276,16 +270,18 @@ impl<const ADDR: u8> Channel<ADDR> {
                 + ERROR_CONFIG::over_range_error_to_output_register::no_report
                 + ERROR_CONFIG::under_range_error_to_output_register::no_report,
         );
+
         ldc.register.mux_config.write(
             &mut *i2c,
-            MUX_CONFIG::input_deglitch_filter_bandwidth::with_3MHz3
-                + match self.channel {
-                    Channel::Zero => MUX_CONFIG::auto_scan_sequence_config::channel_0_1,
-                    Channel::One => MUX_CONFIG::auto_scan_sequence_config::channel_0_1,
-                    Channel::Two => MUX_CONFIG::auto_scan_sequence_config::channel_0_1_2,
-                    Channel::Three => MUX_CONFIG::auto_scan_sequence_config::channel_0_1_2_3,
-                }
-                + MUX_CONFIG::auto_scan_mode::manual,
+            MUX_CONFIG::input_deglitch_filter_bandwidth.val(match register.get("DEGLITCH") {
+                Some(&value) => value as usize,
+                None => 0b001,
+            }) + match self.channel {
+                Channel::Zero => MUX_CONFIG::auto_scan_sequence_config::channel_0_1,
+                Channel::One => MUX_CONFIG::auto_scan_sequence_config::channel_0_1,
+                Channel::Two => MUX_CONFIG::auto_scan_sequence_config::channel_0_1_2,
+                Channel::Three => MUX_CONFIG::auto_scan_sequence_config::channel_0_1_2_3,
+            } + MUX_CONFIG::auto_scan_mode::manual,
         );
         ldc.register.config.write(
             &mut *i2c,
@@ -303,6 +299,6 @@ impl<const ADDR: u8> Channel<ADDR> {
                     Channel::Three => CONFIG::active_channel::channel3,
                 },
         );
-        unimplemented!()
+        Ok(())
     }
 }

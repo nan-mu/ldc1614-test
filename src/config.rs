@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::Result;
 
 #[derive(Debug, serde::Deserialize, PartialEq, Eq, Clone)]

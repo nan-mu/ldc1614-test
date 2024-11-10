@@ -21,7 +21,7 @@ pub struct Handler {
 }
 
 impl Handler {
-    async fn submit(self) -> Result<()> {
+    pub async fn submit(self) -> Result<()> {
         for (consumer, mut rx) in self.rx {
             match consumer {
                 Consumer::Csv { path } => {

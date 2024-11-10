@@ -1,14 +1,27 @@
 use super::Result;
 
+use log::debug;
 use rppal::gpio;
 pub struct Motor {
     pwm: gpio::OutputPin,
     dir: gpio::OutputPin,
+    position: f64,
 }
 
 impl Motor {
     pub fn new(pwm: gpio::OutputPin, dir: gpio::OutputPin) -> Self {
-        Motor { pwm, dir }
+        Motor {
+            pwm,
+            dir,
+            position: 0.0,
+        }
+    }
+
+    pub async fn goto(&mut self, target: f64) -> Result<()> {
+        debug!("电机从 {}mm 移动到 {}mm", self.position, target);
+        self.moving(target - self.position).await?;
+        self.position = target;
+        Ok(())
     }
 
     /// GPIO模拟PWM输出

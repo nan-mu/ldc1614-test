@@ -1,8 +1,6 @@
-use log::debug;
+use crate::Result;
 
-use crate::{Error, Result};
-
-#[derive(Debug, serde::Deserialize, PartialEq, Eq)]
+#[derive(Debug, serde::Deserialize, PartialEq, Eq, Clone)]
 pub struct Register {
     field: String,
     value: u32,
@@ -10,27 +8,27 @@ pub struct Register {
 
 #[derive(Debug, serde::Deserialize)]
 pub struct Task {
-    registers: Vec<Register>,
+    pub registers: Vec<Register>,
     channel: u8,
-    count: usize,
+    pub count: usize,
     location: String,
 }
 
 #[derive(Debug, serde::Deserialize)]
 pub struct Redis {
-    url: String,
+    pub url: String,
 }
 
 #[derive(Debug, serde::Deserialize)]
 pub struct Csv {
-    path: Option<String>,
+    pub path: Option<String>,
 }
 
 #[derive(Debug, serde::Deserialize)]
 pub struct Config {
-    csv: Option<Csv>,
-    redis: Option<Redis>,
-    tasks: Vec<Task>,
+    pub csv: Option<Csv>,
+    pub redis: Option<Redis>,
+    pub tasks: Vec<Task>,
 }
 
 impl Config {
@@ -47,40 +45,52 @@ impl Config {
     }
 }
 
-use crate::handler;
+impl Task {
+    pub fn registers(&self) -> Vec<Register> {
+        self.registers.clone()
+    }
+    pub fn channel(&self) -> ldc1614::Channel {
+        match self.channel {
+            0 => ldc1614::Channel::Zero,
+            1 => ldc1614::Channel::One,
+            2 => ldc1614::Channel::Two,
+            3 => ldc1614::Channel::Three,
+            _ => panic!("Invalid channel number"),
+        }
+    }
 
-impl TryFrom<Config> for (Vec<Task>, handler::Handler) {
-    type Error = super::Error;
-    fn try_from(value: Config) -> std::result::Result<Self, Self::Error> {
-        use handler::Consumer;
-        use std::{path::Path, sync::Arc};
+    pub fn position(&self) -> Vec<f64> {
+        let parts: Vec<&str> = self.location.split(':').collect();
+        let start: f64;
+        let step: f64;
+        let end: f64;
 
-        debug!("创建广播通道");
-        let (tx, _) = tokio::sync::broadcast::channel(512);
-
-        let mut consumers = vec![];
-        if let Some(csv) = value.csv {
-            debug!("发现csv配置");
-            consumers.push((
-                Consumer::Csv {
-                    path: csv.path.map(|p| Arc::from(Path::new(&p))),
-                },
-                tx.subscribe(),
-            ));
+        match parts.len() {
+            1 => {
+                start = parts[0].parse().unwrap();
+                step = 1.0;
+                end = start;
+            }
+            2 => {
+                start = parts[0].parse().unwrap();
+                step = 1.0;
+                end = parts[1].parse().unwrap();
+            }
+            3 => {
+                start = parts[0].parse().unwrap();
+                step = parts[1].parse().unwrap();
+                end = parts[2].parse().unwrap();
+            }
+            _ => panic!("Invalid location format"),
         }
 
-        if let Some(redis) = value.redis {
-            debug!("发现redis配置");
-            consumers.push((
-                Consumer::Redis {
-                    url: redis.url.into(),
-                },
-                tx.subscribe(),
-            ));
+        let mut result = Vec::new();
+        let mut current = start;
+        while current <= end {
+            result.push(current);
+            current += step;
         }
-
-        let handler = handler::Handler { rx: consumers };
-        unimplemented!()
+        result
     }
 }
 

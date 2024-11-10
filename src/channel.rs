@@ -5,7 +5,7 @@ use super::{Error, Result};
 use chrono::Local;
 use tokio::sync::{self, broadcast};
 
-struct Channel<const ADDR: u8> {
+pub struct Channel<const ADDR: u8> {
     ldc: std::sync::Arc<sync::Mutex<ldc1614::Ldc<ADDR>>>,
     i2c: std::sync::Arc<sync::Mutex<rppal::i2c::I2c>>,
     channel: ldc1614::Channel,
@@ -15,7 +15,23 @@ struct Channel<const ADDR: u8> {
 use crate::config;
 
 impl<const ADDR: u8> Channel<ADDR> {
-    async fn submit(&self, mark: Option<std::sync::Arc<str>>) -> Result<usize> {
+    pub fn from(
+        channel: ldc1614::Channel,
+        rx: broadcast::Sender<super::Record>,
+        ldc: std::sync::Arc<sync::Mutex<ldc1614::Ldc<ADDR>>>,
+        i2c: std::sync::Arc<sync::Mutex<rppal::i2c::I2c>>,
+    ) -> Self {
+        Self {
+            ldc,
+            i2c,
+            channel,
+            rx,
+        }
+    }
+}
+
+impl<const ADDR: u8> Channel<ADDR> {
+    pub async fn submit(&self, mark: Option<std::sync::Arc<str>>) -> Result<usize> {
         let (ldc, mut i2c) = tokio::join!(self.ldc.lock(), self.i2c.lock());
         Ok(self.rx.send(crate::Record {
             timestamp: Local::now(),
@@ -26,7 +42,7 @@ impl<const ADDR: u8> Channel<ADDR> {
             mark,
         })?)
     }
-    async fn apply_reg_config(&mut self, register: config::Register) -> Result<()> {
+    pub async fn apply_reg_config(&mut self, register: Vec<config::Register>) -> Result<()> {
         use ldc1614::{
             bitmap::{
                 CLOCK_DIVIDERSx, DRIVE_CURRENTx, OFFSETx, RCOUNTx, SETTLECOUNTx, CONFIG,

@@ -23,8 +23,6 @@ tasks:
         value: 0b1
       - field: "fref_divider"
         value: 0b10
-      - field: "rr_sequence"
-        value: 1
       - field: "deglitch"
         value: 0b001
       - field: "LC_sensor_drive_current"

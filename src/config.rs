@@ -48,6 +48,22 @@ impl Config {
     }
 }
 
+#[tokio::test]
+async fn test_yml() {
+    use std::path::Path;
+    if !Path::new("task.yml").exists() {
+        panic!("配置文件不存在");
+    }
+
+    match Config::read_config("task.yml") {
+        Ok(config) => {
+            println!("{:?}", config);
+            assert!(config.tasks.len() > 0, "任务列表不能为空");
+        }
+        Err(e) => panic!("读取配置文件失败: {}", e),
+    }
+}
+
 impl Task {
     pub fn registers(&self) -> Vec<Register> {
         self.registers.clone()

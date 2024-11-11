@@ -105,13 +105,13 @@ impl LdcRegister {
 }
 
 tock_registers::register_bitfields![
-    usize,
+    u16,
     pub DATA_MSB [
         data OFFSET(0) NUMBITS(12),
-        err_ae OFFSET(0) NUMBITS(1),
-        err_wd OFFSET(0) NUMBITS(1),
-        err_or OFFSET(0) NUMBITS(1),
-        err_ur OFFSET(0) NUMBITS(1),
+        err_ae OFFSET(12) NUMBITS(1),
+        err_wd OFFSET(13) NUMBITS(1),
+        err_or OFFSET(14) NUMBITS(1),
+        err_ur OFFSET(15) NUMBITS(1),
     ],
     pub DATA_LSB [
         data OFFSET(0) NUMBITS(16),
@@ -127,55 +127,55 @@ tock_registers::register_bitfields![
     ],
     pub CLOCK_DIVIDERSx [
         fref_divider OFFSET(0) NUMBITS(10),
-        reserved OFFSET(0) NUMBITS(2),
-        fin_divider OFFSET(0) NUMBITS(4),
+        reserved OFFSET(10) NUMBITS(2),
+        fin_divider OFFSET(12) NUMBITS(4),
     ],
     pub STATUS [
         unread_conv0 OFFSET(0) NUMBITS(1) [
             unread_conversion = 1,
             fine = 0
         ],
-        unread_conv1 OFFSET(0) NUMBITS(1) [
+        unread_conv1 OFFSET(1) NUMBITS(1) [
             unread_conversion = 1,
             fine = 0
         ],
-        unread_conv2 OFFSET(0) NUMBITS(1) [
+        unread_conv2 OFFSET(2) NUMBITS(1) [
             unread_conversion = 1,
             fine = 0
         ],
-        unread_conv3 OFFSET(0) NUMBITS(1) [
+        unread_conv3 OFFSET(3) NUMBITS(1) [
             unread_conversion = 1,
             fine = 0
         ],
-        data_ready OFFSET(2) NUMBITS(1) [
+        data_ready OFFSET(6) NUMBITS(1) [
             no_ready = 0,
             ready = 1
         ],
-        zero_count_error OFFSET(1) NUMBITS(1) [
+        zero_count_error OFFSET(8) NUMBITS(1) [
             no_error = 0,
             error = 1
         ],
-        sensor_activation_low_error OFFSET(0) NUMBITS(1) [
+        sensor_activation_low_error OFFSET(9) NUMBITS(1) [
             no_error = 0,
             error = 1
         ],
-        sensor_amplitude_high_error OFFSET(0) NUMBITS(1) [
+        sensor_amplitude_high_error OFFSET(10) NUMBITS(1) [
             no_error = 0,
             error = 1
         ],
-        watchdog_timeout_error OFFSET(0) NUMBITS(1) [
+        watchdog_timeout_error OFFSET(11) NUMBITS(1) [
             no_error = 0,
             error = 1
         ],
-        conversion_over_range_error OFFSET(0) NUMBITS(1) [
+        conversion_over_range_error OFFSET(12) NUMBITS(1) [
             no_error = 0,
             error = 1
         ],
-        conversion_under_range_error OFFSET(0) NUMBITS(1) [
+        conversion_under_range_error OFFSET(13) NUMBITS(1) [
             no_error = 0,
             error = 1
         ],
-        error_channel OFFSET(0) NUMBITS(2) [
+        error_channel OFFSET(14) NUMBITS(2) [
             channel0 = 0,
             channel1 = 1,
             channel2 = 2,
@@ -187,47 +187,47 @@ tock_registers::register_bitfields![
             no_report = 0,
             report = 1
         ],
-        zero_count_error_to_INTB OFFSET(1) NUMBITS(1) [
+        zero_count_error_to_INTB OFFSET(2) NUMBITS(1) [
             no_report = 0,
             report = 1
         ],
-        amplitude_low_error_to_INTB OFFSET(0) NUMBITS(1) [
+        amplitude_low_error_to_INTB OFFSET(3) NUMBITS(1) [
             no_report = 0,
             report = 1
         ],
-        amplitude_high_error_to_INTB OFFSET(0) NUMBITS(1) [
+        amplitude_high_error_to_INTB OFFSET(4) NUMBITS(1) [
             no_report = 0,
             report = 1
         ],
-        watchdog_timeout_error_to_INTB OFFSET(0) NUMBITS(1) [
+        watchdog_timeout_error_to_INTB OFFSET(5) NUMBITS(1) [
             no_report = 0,
             report = 1
         ],
-        over_range_error_to_INTB OFFSET(0) NUMBITS(1) [
+        over_range_error_to_INTB OFFSET(6) NUMBITS(1) [
             no_report = 0,
             report = 1
         ],
-        under_range_error_to_INTB OFFSET(0) NUMBITS(1) [
+        under_range_error_to_INTB OFFSET(7) NUMBITS(1) [
             no_report = 0,
             report = 1
         ],
-        amplitude_low_error_to_output_register OFFSET(2) NUMBITS(1) [
+        amplitude_low_error_to_output_register OFFSET(10) NUMBITS(1) [
             no_report = 0,
             report = 1
         ],
-        amplitude_high_error_to_output_register OFFSET(0) NUMBITS(1) [
+        amplitude_high_error_to_output_register OFFSET(11) NUMBITS(1) [
             no_report = 0,
             report = 1
         ],
-        watchdog_timeout_error_to_output_register OFFSET(0) NUMBITS(1) [
+        watchdog_timeout_error_to_output_register OFFSET(12) NUMBITS(1) [
             no_report = 0,
             report = 1
         ],
-        over_range_error_to_output_register OFFSET(0) NUMBITS(1) [
+        over_range_error_to_output_register OFFSET(13) NUMBITS(1) [
             no_report = 0,
             report = 1
         ],
-        under_range_error_to_output_register OFFSET(0) NUMBITS(1) [
+        under_range_error_to_output_register OFFSET(14) NUMBITS(1) [
             no_report = 0,
             report = 1
         ],
@@ -237,31 +237,31 @@ tock_registers::register_bitfields![
             normal = 0,
             high = 1,
         ],
-        INTB_asserted OFFSET(0) NUMBITS(1) [
+        INTB_asserted OFFSET(7) NUMBITS(1) [
             enable = 0,
             disable = 1
         ],
-        select_reference_frequency_source OFFSET(1) NUMBITS(1) [
+        select_reference_frequency_source OFFSET(9) NUMBITS(1) [
             internal_oscillator = 0,
             from_CLKIN = 1
         ],
-        automatic_sensor_amplitude_correction OFFSET(0) NUMBITS(1) [
+        automatic_sensor_amplitude_correction OFFSET(10) NUMBITS(1) [
             enable = 0,
             disable = 1
         ],
-        sensor_activation_mode OFFSET(0) NUMBITS(1) [
+        sensor_activation_mode OFFSET(11) NUMBITS(1) [
             full = 0,
             low = 1
         ],
-        sensor_rp_override OFFSET(0) NUMBITS(1) [
+        sensor_rp_override OFFSET(12) NUMBITS(1) [
             off = 0,
             on = 1
         ],
-        sleep_mode OFFSET(0) NUMBITS(1) [
+        sleep_mode OFFSET(13) NUMBITS(1) [
             active = 0,
             sleep = 1
         ],
-        active_channel OFFSET(0) NUMBITS(2) [
+        active_channel OFFSET(14) NUMBITS(2) [
             channel0 = 0,
             channel1 = 1,
             channel2 = 2,
@@ -275,13 +275,13 @@ tock_registers::register_bitfields![
             with_10MHz = 0b101,
             with_33MHz = 0b111,
         ],
-        auto_scan_sequence_config OFFSET(10) NUMBITS(2) [
+        auto_scan_sequence_config OFFSET(13) NUMBITS(2) [
             channel_0_1 = 0b00,
             channel_0_1_2 = 0b01,
             channel_0_1_2_3 = 0b10,
             // channel_0_1 = 0b11 这个抽象规格书，神tm相同配置映射两个值，不管了！
         ],
-        auto_scan_mode OFFSET(0) NUMBITS(1) [
+        auto_scan_mode OFFSET(15) NUMBITS(1) [
             manual = 0,
             auto = 1,
         ],
@@ -293,51 +293,23 @@ tock_registers::register_bitfields![
     ],
     pub DRIVE_CURRENTx [
         sensor_current_drive OFFSET(6) NUMBITS(5) [],
-        LC_sensor_drive_current OFFSET(0) NUMBITS(5) [],
+        LC_sensor_drive_current OFFSET(11) NUMBITS(5) [],
     ],
     pub MANUFCTURER_ID [
         manufcturer_id OFFSET(0) NUMBITS(16) [],
     ],
 ];
 
-// register_structs! {
-//     DataRegisters {
-//         (0x00 => data0_msb: ReadOnly<u8,DATA_MSB::Register>),
-//         (0x01 => data0_lsb: ReadOnly<u8,DATA_LSB::Register>),
-//         (0x02 => data1_msb: ReadOnly<u8,DATA_MSB::Register>),
-//         (0x03 => data1_lsb: ReadOnly<u8,DATA_LSB::Register>),
-//         (0x04 => data2_msb: ReadOnly<u8,DATA_MSB::Register>),
-//         (0x05 => data2_lsb: ReadOnly<u8,DATA_LSB::Register>),
-//         (0x06 => data3_msb: ReadOnly<u8,DATA_MSB::Register>),
-//         (0x07 => data3_lsb: ReadOnly<u8,DATA_LSB::Register>),
-//         (0x08 => @END),
-//     }
-// }
-// register_structs! {
-//     ChannelRegisters {
-//         (0x00 => _reserved),
-//         (0x08 => rcountx: [ReadWrite<u8,RCOUNTx::Register>;4]),
-//         (0x0c => offsetx: [ReadWrite<u8,OFFSETx::Register>;4]),
-//         (0x10 => settlecountx: [ReadWrite<u8,SETTLECOUNTx::Register>;4]),
-//         (0x14 => clock_dividersx: [ReadWrite<u8,CLOCK_DIVIDERSx::Register>;4]),
-//         (0x18 => @END),
-//     }
-// }
-// register_structs! {
-//     ConfigRegisters {
-//         (0x00 => _reserved),
-//         (0x18 => status: ReadOnly<u8,STATUS::Register>),
-//         (0x19 => error_config: ReadWrite<u8,ERROR_CONFIG::Register>),
-//         (0x1a => config: ReadWrite<u8,CONFIG::Register>),
-//         (0x1b => mux_config: ReadWrite<u8,MUX_CONFIG::Register>),
-//         (0x1c => reset_dev: ReadWrite<u8,RESET_DEV::Register>),
-//         (0x1d => @END),
-//     }
-// }
-// register_structs! {
-//     DriveCurrentRegisters {
-//         (0x00 => _reserved),
-//         (0x1e => drive_currentx: [ReadWrite<u8,DRIVE_CURRENTx::Register>;4]),
-//         (0x22 => @END),
-//     }
-// }
+#[test]
+fn test_values() {
+    tock_registers::register_bitfields![
+        u8,
+        TEST [
+            a OFFSET(0) NUMBITS(4),
+            b OFFSET(4) NUMBITS(4),
+        ]
+    ];
+    let value = TEST::a.val(0xf)+TEST::b.val(0xf);
+
+    assert_eq!(value.value, 0xff);
+}

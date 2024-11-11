@@ -85,20 +85,6 @@ async fn main() -> Result<()> {
         )
         .init();
 
-    debug!("初始化参数");
-    use ldc1614::Channel;
-    assert!(args.channel <= 3, "错误: 通道只能选择0, 1, 2, 3");
-    let real_channel = match args.channel {
-        0 => Channel::Zero,
-        1 => Channel::One,
-        2 => Channel::Two,
-        3 => Channel::Three,
-        _ => {
-            assert!(args.channel <= 3, "错误: 通道只能选择0, 1, 2, 3");
-            std::process::exit(1);
-        }
-    };
-
     debug!("读取配置文件");
     use config::Config;
     let config = Config::read_config("./tasks.yml").unwrap();

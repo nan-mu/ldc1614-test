@@ -1,4 +1,5 @@
 use core::marker;
+use byteorder::{BigEndian, ByteOrder};
 use embedded_hal::i2c;
 use tock_registers::{fields, UIntLike};
 
@@ -17,69 +18,29 @@ where
     SlaveAddr: i2c::AddressMode + Copy,
     Register: tock_registers::RegisterLongName,
 {
-    pub fn read<Bits, I2C>(&self, i2c: &mut I2C, field: fields::Field<Bits, Register>) -> Bits
+    pub fn read<I2C>(&self, i2c: &mut I2C, field: fields::Field<u16, Register>) -> u16
     where
         I2C: i2c::I2c<SlaveAddr>,
-        Bits: UIntLike + From<usize>,
     {
-        assert!(
-            REGISTER_BYTE_LEN == 1
-                || REGISTER_BYTE_LEN == 2
-                || REGISTER_BYTE_LEN == 4
-                || REGISTER_BYTE_LEN == 8,
-            "RegisterByteLen must be 1, 2, 4, or 8"
-        );
         let mut read = [0u8; REGISTER_BYTE_LEN];
-        if REGISTER_ADDR < u8::MAX as u16 {
-            i2c.write_read(self.slave_address, &[REGISTER_ADDR as u8], &mut read)
-                .unwrap();
-        } else {
-            i2c.write_read(
-                self.slave_address,
-                &[(REGISTER_ADDR >> 8) as u8, REGISTER_ADDR as u8],
-                &mut read,
-            )
+        i2c.write_read(self.slave_address, &[REGISTER_ADDR as u8], &mut read)
             .unwrap();
-        }
-        let mut read_fixed = [0u8; 8];
-        read_fixed[(8 - REGISTER_BYTE_LEN)..].copy_from_slice(&read);
-        // println!("reads: {:?}", read);
-        let read = usize::from_be_bytes(read_fixed);
-        // println!("read: {}", read);
-        field.read(Bits::from(read))
+        log::debug!("读取寄存器 0x{:02x}, 得到 {:?}", REGISTER_ADDR, &read);
+        field.read(BigEndian::read_u16(&read))
     }
 
-    pub fn write<Bits, I2C>(&self, i2c: &mut I2C, field: fields::FieldValue<Bits, Register>)
+    pub fn write<I2C>(&self, i2c: &mut I2C, field: fields::FieldValue<u16, Register>)
     where
         I2C: i2c::I2c<SlaveAddr>,
-        Bits: UIntLike + Into<usize>,
+        u16: UIntLike + Into<usize>,
     {
-        assert!(
-            REGISTER_BYTE_LEN == 1
-                || REGISTER_BYTE_LEN == 2
-                || REGISTER_BYTE_LEN == 4
-                || REGISTER_BYTE_LEN == 8,
-            "RegisterByteLen must be 1, 2, 4, or 8"
-        );
-
-        let mut read = [0; 10];
-        let mut register_len = 1;
-        if REGISTER_ADDR < u8::MAX as u16 {
-            read[0] = REGISTER_ADDR as u8;
-            read[1..(1 + REGISTER_BYTE_LEN)]
-                .copy_from_slice(&field.value.into().to_le_bytes()[(8 - REGISTER_BYTE_LEN)..]);
-        } else {
-            register_len = 2;
-            read[0] = (REGISTER_ADDR >> 8) as u8;
-            read[1] = REGISTER_ADDR as u8;
-            read[2..(2 + REGISTER_BYTE_LEN)]
-                .copy_from_slice(&field.value.into().to_le_bytes()[(8 - REGISTER_BYTE_LEN)..]);
-        }
-        // std::thread::sleep(std::time::Duration::from_secs(1));
-        println!("{:?}", read);
+        let mut read = [0;3];
+        read[0] = REGISTER_ADDR as u8;
+        BigEndian::write_u16(&mut read[1..], field.value);
+        log::debug!("计算寄存器 0x{:02x} 值为 0x{:04x}, 写入 {:02x?}",&read[0], field.value, &read);
         i2c.write(
             self.slave_address,
-            &read[..(register_len + REGISTER_BYTE_LEN)],
+            &read,
         )
         .unwrap();
     }
@@ -111,11 +72,11 @@ where
     SlaveAddr: i2c::AddressMode + Copy,
     Register: tock_registers::RegisterLongName,
 {
-    pub fn read<Bits: UIntLike + From<usize>, I2C: i2c::I2c<SlaveAddr>>(
+    pub fn read<I2C: i2c::I2c<SlaveAddr>>(
         &self,
         i2c: &mut I2C,
-        field: fields::Field<Bits, Register>,
-    ) -> Bits {
+        field: fields::Field<u16, Register>,
+    ) -> u16 {
         self.0.read(i2c, field)
     }
     pub fn new(slave_address: SlaveAddr) -> Self {
@@ -132,10 +93,10 @@ where
     SlaveAddr: i2c::AddressMode + Copy,
     Register: tock_registers::RegisterLongName,
 {
-    pub fn write<Bits: UIntLike + Into<usize>, I2C: i2c::I2c<SlaveAddr>>(
+    pub fn write<I2C: i2c::I2c<SlaveAddr>>(
         &self,
         i2c: &mut I2C,
-        field: fields::FieldValue<Bits, Register>,
+        field: fields::FieldValue<u16, Register>,
     ) {
         self.0.write(i2c, field)
     }
@@ -163,17 +124,17 @@ where
     SlaveAddr: i2c::AddressMode + Copy,
     Register: tock_registers::RegisterLongName,
 {
-    pub fn read<Bits: UIntLike + From<usize>, I2C: i2c::I2c<SlaveAddr>>(
+    pub fn read<I2C: i2c::I2c<SlaveAddr>>(
         &self,
         i2c: &mut I2C,
-        field: fields::Field<Bits, Register>,
-    ) -> Bits {
+        field: fields::Field<u16, Register>,
+    ) -> u16 {
         self.0.read(i2c, field)
     }
-    pub fn write<Bits: UIntLike + Into<usize>, I2C: i2c::I2c<SlaveAddr>>(
+    pub fn write<I2C: i2c::I2c<SlaveAddr>>(
         &self,
         i2c: &mut I2C,
-        field: fields::FieldValue<Bits, Register>,
+        field: fields::FieldValue<u16, Register>,
     ) {
         self.0.write(i2c, field)
     }

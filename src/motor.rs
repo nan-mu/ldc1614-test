@@ -51,6 +51,10 @@ impl Motor {
         self.pwm.clear_pwm()?;
         Ok(())
     }
+
+    pub fn set_position(&mut self, position: f64) {
+        self.position = position;
+    }
 }
 
 #[tokio::test]

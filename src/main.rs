@@ -110,6 +110,8 @@ async fn main() -> Result<()> {
     let pwm = gpio.get(21).unwrap().into_output_low();
     let dir = gpio.get(12).unwrap().into_output_high();
     let mut motor = Motor::new(pwm, dir);
+    info!("电机初始位置为 {}mm", config.tasks[0].position()[0]);
+    motor.set_position(config.tasks[0].position()[0]);
 
     debug!("创建广播通道");
     use handler::Consumer;

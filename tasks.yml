@@ -29,4 +29,4 @@ tasks:
         value: 31                  # 原值: 0b11111
     channel: 2
     count: 100
-    location: "0" # 毫米
+    location: "0:50" # 毫米

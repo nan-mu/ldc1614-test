@@ -33,6 +33,7 @@ impl Handler {
                                 if path.exists() {
                                     File::options()
                                         .append(true)
+                                        .read(true)
                                         .open(&path)
                                         .map_err(|e| error!("无法打开csv文件 {:?} {:?}", path, e))
                                         .unwrap()
@@ -73,20 +74,18 @@ impl Handler {
                     let mut wtr = if file.metadata().expect("无法读取文件元数据").len() == 0
                     {
                         let wtr = Writer::from_writer(file);
-                        // wtr.write_record(&["timestamp", "data", "mark"]).unwrap(); // 我怀疑我们不用手动写一个表头
                         wtr
                     } else {
-                        let reader = BufReader::new(&file);
+                        let reader = BufReader::new(file.try_clone().unwrap());
                         let mut lines = reader.lines();
                         if let Some(Ok(first_line)) = lines.next() {
                             if first_line.trim() != "timestamp,data,mark" {
                                 error!("错误的csv文件格式，将在文件末尾追加新内容");
                             }
                             let wtr = Writer::from_writer(file);
-                            // wtr.write_record(&["timestamp", "data", "mark"]).unwrap(); // 我怀疑我们不用手动写一个表头
                             wtr
                         } else {
-                            error!("无法读取csv文件");
+                            error!("无法读取csv文件: {:?}", file);
                             return Err(Error::ConfigError);
                         }
                     };

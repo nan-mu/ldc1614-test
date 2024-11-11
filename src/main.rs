@@ -6,25 +6,17 @@ mod handler;
 mod motor;
 
 use clap::Parser;
-use log::error;
+use log::{error, info};
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
-    /// 采样时间（毫秒）
-    #[clap(short, long, default_value_t = 1000)]
-    sample_time: u64,
-
     /// 日志等级
     #[clap(short, long, default_value = "debug")]
     log_level: String,
 
-    /// 选择的通道（0-3）
-    #[clap(short, long, default_value_t = 0)]
-    channel: u8,
-
-    /// 单次运行完成
-    #[clap(short, long, default_value_t = 5)]
-    test_count: u8,
+    /// 配置文件路径
+    #[clap(short, long, default_value = "tasks.yml")]
+    config: String,
 }
 
 use std::sync;
@@ -87,7 +79,7 @@ async fn main() -> Result<()> {
 
     debug!("读取配置文件");
     use config::Config;
-    let config = Config::read_config("./tasks.yml").unwrap();
+    let config = Config::read_config(&args.config).unwrap();
 
     debug!("初始化i2c设备");
     use ldc1614::{bitmap::MANUFCTURER_ID, Ldc};
@@ -106,7 +98,15 @@ async fn main() -> Result<()> {
     debug!("初始化gpio");
     use motor::Motor;
     use rppal::gpio::Gpio;
-    let gpio = Gpio::new().unwrap();
+    let gpio = Gpio::new()
+        .map_err(|e| {
+            error!(
+                "GPIO 初始化失败: {:?}。考虑运行：`sudo chown $USER /dev/*`",
+                e
+            );
+            std::process::exit(1);
+        })
+        .unwrap();
     let pwm = gpio.get(21).unwrap().into_output_low();
     let dir = gpio.get(12).unwrap().into_output_high();
     let mut motor = Motor::new(pwm, dir);
@@ -160,5 +160,8 @@ async fn main() -> Result<()> {
 
         // channel.submit()
     }
+
+    info!("测试任务完成，电机正在归位");
+    motor.goto(0.0).await.unwrap();
     Ok(())
 }

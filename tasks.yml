@@ -28,5 +28,5 @@ tasks:
       - field: "LC_sensor_drive_current"
         value: 31                  # 原值: 0b11111
     channel: 2
-    count: 10
+    count: 100
     location: "0" # 毫米

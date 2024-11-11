@@ -31,30 +31,37 @@ impl Handler {
                         Some(path) => match path.extension() {
                             Some(ext) if ext == std::ffi::OsStr::new("csv") => {
                                 if path.exists() {
-                                    File::open(&path).expect(&format!("无法打开csv文件 {:?}", path))
+                                    File::options()
+                                        .append(true)
+                                        .open(&path)
+                                        .map_err(|e| error!("无法打开csv文件 {:?} {:?}", path, e))
+                                        .unwrap()
                                 } else {
                                     warn!("配置文件中csv文件路径不存在，正在尝试创建该文件");
                                     File::create_new(&path)
-                                        .expect(&format!("无法创建文件 {:?}", path))
+                                        .map_err(|e| error!("无法创建文件 {:?} {:?}", path, e))
+                                        .unwrap()
                                 }
                             }
                             // 之后写解析配置文件的时候改一下
                             _ => return Err(Error::ConfigError),
                         },
                         None => {
-                            let filename = format!(
+                            let path = format!(
                                 "data_{}.csv",
                                 Local::now().format("%Y-%m-%d_%H-%M-%S").to_string()
                             );
-                            let file = File::create_new(&filename)
-                                .expect(&format!("无法创建文件 {:?}", filename));
+                            let file = File::create_new(&path)
+                                .map_err(|e| error!("无法创建文件 {:?} {:?}", path, e))
+                                .unwrap();
                             info!(
                                 "创建csv文件 {}{}",
                                 std::env::current_dir()
-                                    .expect("无法获取到当前运行目录")
+                                    .map_err(|e| error!("无法获取到当前运行目录 {:?}", e))
+                                    .unwrap()
                                     .to_str()
                                     .unwrap(),
-                                filename
+                                path
                             );
                             file
                         }
@@ -104,7 +111,7 @@ impl Handler {
                                 mark: record
                                     .mark
                                     .clone()
-                                    .map(|mark| format!("\"{}\"", mark).replace("\n", "\\n")),
+                                    .map(|mark| format!("{}", mark).replace("\n", "\\n")),
                                 timestamp: record.timestamp,
                                 channel: match record.channel {
                                     Channel::Zero => 0,

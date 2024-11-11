@@ -71,21 +71,21 @@ impl<const ADDR: u8> Channel<ADDR> {
                 ldc.register.rcountx.0.write(
                     &mut *i2c,
                     RCOUNTx::rcount.val(match register.get("RCOUNT") {
-                        Some(&value) => value as usize,
+                        Some(&value) => value,
                         None => 0x04d6,
                     }),
                 );
                 ldc.register.offsetx.0.write(
                     &mut *i2c,
                     OFFSETx::offset.val(match register.get("OFFSET") {
-                        Some(&value) => value as usize,
+                        Some(&value) => value,
                         None => 0x0000,
                     }),
                 );
                 ldc.register.settlecountx.0.write(
                     &mut *i2c,
                     SETTLECOUNTx::settlecount.val(match register.get("SETTLECOUNT") {
-                        Some(&value) => value as usize,
+                        Some(&value) => value,
                         None => 0x000a,
                     }),
                 );
@@ -93,10 +93,10 @@ impl<const ADDR: u8> Channel<ADDR> {
                 ldc.register.clock_dividersx.0.write(
                     &mut *i2c,
                     CLOCK_DIVIDERSx::fref_divider.val(match register.get("FREF_DIVIDERS") {
-                        Some(&value) => value as usize,
+                        Some(&value) => value,
                         None => 2,
                     }) + CLOCK_DIVIDERSx::fin_divider.val(match register.get("FIN_DIVIDERS") {
-                        Some(&value) => value as usize,
+                        Some(&value) => value,
                         None => 1,
                     }),
                 );
@@ -105,7 +105,7 @@ impl<const ADDR: u8> Channel<ADDR> {
                     &mut *i2c,
                     DRIVE_CURRENTx::LC_sensor_drive_current.val(
                         match register.get("LC_SENSOR_DRIVE_CURRENT") {
-                            Some(&value) => value as usize,
+                            Some(&value) => value,
                             None => 0b10010,
                         },
                     ),
@@ -115,21 +115,21 @@ impl<const ADDR: u8> Channel<ADDR> {
                 ldc.register.rcountx.1.write(
                     &mut *i2c,
                     RCOUNTx::rcount.val(match register.get("RCOUNT") {
-                        Some(&value) => value as usize,
+                        Some(&value) => value,
                         None => 0x04d6,
                     }),
                 );
                 ldc.register.offsetx.1.write(
                     &mut *i2c,
                     OFFSETx::offset.val(match register.get("OFFSET") {
-                        Some(&value) => value as usize,
+                        Some(&value) => value,
                         None => 0x0000,
                     }),
                 );
                 ldc.register.settlecountx.1.write(
                     &mut *i2c,
                     SETTLECOUNTx::settlecount.val(match register.get("SETTLECOUNT") {
-                        Some(&value) => value as usize,
+                        Some(&value) => value,
                         None => 0x000a,
                     }),
                 );
@@ -137,10 +137,10 @@ impl<const ADDR: u8> Channel<ADDR> {
                 ldc.register.clock_dividersx.1.write(
                     &mut *i2c,
                     CLOCK_DIVIDERSx::fref_divider.val(match register.get("FREF_DIVIDERS") {
-                        Some(&value) => value as usize,
+                        Some(&value) => value,
                         None => 2,
                     }) + CLOCK_DIVIDERSx::fin_divider.val(match register.get("FIN_DIVIDERS") {
-                        Some(&value) => value as usize,
+                        Some(&value) => value,
                         None => 1,
                     }),
                 );
@@ -149,7 +149,7 @@ impl<const ADDR: u8> Channel<ADDR> {
                     &mut *i2c,
                     DRIVE_CURRENTx::LC_sensor_drive_current.val(
                         match register.get("LC_SENSOR_DRIVE_CURRENT") {
-                            Some(&value) => value as usize,
+                            Some(&value) => value,
                             None => 0b10010,
                         },
                     ),
@@ -159,21 +159,21 @@ impl<const ADDR: u8> Channel<ADDR> {
                 ldc.register.rcountx.2.write(
                     &mut *i2c,
                     RCOUNTx::rcount.val(match register.get("RCOUNT") {
-                        Some(&value) => value as usize,
+                        Some(&value) => value,
                         None => 0x04d6,
                     }),
                 );
                 ldc.register.offsetx.2.write(
                     &mut *i2c,
                     OFFSETx::offset.val(match register.get("OFFSET") {
-                        Some(&value) => value as usize,
+                        Some(&value) => value,
                         None => 0x0000,
                     }),
                 );
                 ldc.register.settlecountx.2.write(
                     &mut *i2c,
                     SETTLECOUNTx::settlecount.val(match register.get("SETTLECOUNT") {
-                        Some(&value) => value as usize,
+                        Some(&value) => value,
                         None => 0x000a,
                     }),
                 );
@@ -181,10 +181,10 @@ impl<const ADDR: u8> Channel<ADDR> {
                 ldc.register.clock_dividersx.2.write(
                     &mut *i2c,
                     CLOCK_DIVIDERSx::fref_divider.val(match register.get("FREF_DIVIDERS") {
-                        Some(&value) => value as usize,
+                        Some(&value) => value,
                         None => 2,
                     }) + CLOCK_DIVIDERSx::fin_divider.val(match register.get("FIN_DIVIDERS") {
-                        Some(&value) => value as usize,
+                        Some(&value) => value,
                         None => 1,
                     }),
                 );
@@ -193,7 +193,7 @@ impl<const ADDR: u8> Channel<ADDR> {
                     &mut *i2c,
                     DRIVE_CURRENTx::LC_sensor_drive_current.val(
                         match register.get("LC_sensor_drive_current") {
-                            Some(&value) => value as usize,
+                            Some(&value) => value,
                             None => 0b10010,
                         },
                     ),
@@ -203,21 +203,21 @@ impl<const ADDR: u8> Channel<ADDR> {
                 ldc.register.rcountx.3.write(
                     &mut *i2c,
                     RCOUNTx::rcount.val(match register.get("RCOUNT") {
-                        Some(&value) => value as usize,
+                        Some(&value) => value,
                         None => 0x04d6,
                     }),
                 );
                 ldc.register.offsetx.3.write(
                     &mut *i2c,
                     OFFSETx::offset.val(match register.get("OFFSET") {
-                        Some(&value) => value as usize,
+                        Some(&value) => value,
                         None => 0x0000,
                     }),
                 );
                 ldc.register.settlecountx.3.write(
                     &mut *i2c,
                     SETTLECOUNTx::settlecount.val(match register.get("SETTLECOUNT") {
-                        Some(&value) => value as usize,
+                        Some(&value) => value,
                         None => 0x000a,
                     }),
                 );
@@ -225,10 +225,10 @@ impl<const ADDR: u8> Channel<ADDR> {
                 ldc.register.clock_dividersx.3.write(
                     &mut *i2c,
                     CLOCK_DIVIDERSx::fref_divider.val(match register.get("FREF_DIVIDERS") {
-                        Some(&value) => value as usize,
+                        Some(&value) => value,
                         None => 2,
                     }) + CLOCK_DIVIDERSx::fin_divider.val(match register.get("FIN_DIVIDERS") {
-                        Some(&value) => value as usize,
+                        Some(&value) => value,
                         None => 1,
                     }),
                 );
@@ -237,7 +237,7 @@ impl<const ADDR: u8> Channel<ADDR> {
                     &mut *i2c,
                     DRIVE_CURRENTx::LC_sensor_drive_current.val(
                         match register.get("LC_SENSOR_DRIVE_CURRENT") {
-                            Some(&value) => value as usize,
+                            Some(&value) => value,
                             None => 0b10010,
                         },
                     ),
@@ -263,7 +263,7 @@ impl<const ADDR: u8> Channel<ADDR> {
         ldc.register.mux_config.write(
             &mut *i2c,
             MUX_CONFIG::input_deglitch_filter_bandwidth.val(match register.get("DEGLITCH") {
-                Some(&value) => value as usize,
+                Some(&value) => value,
                 None => 0b001,
             }) + match self.channel {
                 Channel::Zero => MUX_CONFIG::auto_scan_sequence_config::channel_0_1,

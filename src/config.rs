@@ -3,7 +3,7 @@ use crate::Result;
 #[derive(Debug, serde::Deserialize, PartialEq, Eq, Clone)]
 pub struct Register {
     pub field: String,
-    pub value: u32,
+    pub value: u16,
 }
 
 #[derive(Debug, serde::Deserialize)]

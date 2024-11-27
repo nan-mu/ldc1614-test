@@ -4,7 +4,6 @@ mod channel;
 mod config;
 mod handler;
 mod motor;
-mod servo;
 
 use clap::Parser;
 use log::{error, info};

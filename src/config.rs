@@ -1,14 +1,16 @@
+use std::fmt::Debug;
+
 use crate::Result;
 
 #[derive(Debug, serde::Deserialize, PartialEq, Eq, Clone)]
 pub struct Register {
     pub field: String,
-    pub value: u16,
+    pub value: String,
 }
 
 #[derive(Debug, serde::Deserialize)]
 pub struct Task {
-    pub registers: Vec<Register>,
+    pub registers: Option<Vec<Register>>,
     channel: u8,
     pub count: usize,
     location: String,
@@ -41,10 +43,22 @@ impl Config {
         let file = File::open(path).expect("无法打开文件");
         let reader = BufReader::new(file);
         let deserializer = Deserializer::from_reader(reader);
-        Deserialize::deserialize(deserializer).map_err(|e| {
-            log::error!("{:?}", e);
-            Error::ConfigError
-        })
+        let config = Deserialize::deserialize(deserializer)
+            as std::result::Result<Config, serde_yaml::Error>;
+        match config {
+            Ok(mut config) => {
+                config.tasks.iter_mut().for_each(|task| {
+                    if let Some(_) = &task.registers {
+                        todo!("检查是否所有寄存器设置选项都支持");
+                    }
+                });
+                Ok(config)
+            }
+            Err(e) => {
+                log::error!("{:?}", e);
+                Err(Error::ConfigError)
+            }
+        }
     }
 }
 
@@ -76,30 +90,7 @@ impl Task {
     }
 
     pub fn position(&self) -> Vec<f64> {
-        let parts: Vec<&str> = self.location.split(':').collect();
-        let start: f64;
-        let step: f64;
-        let end: f64;
-
-        match parts.len() {
-            1 => {
-                start = parts[0].parse().unwrap();
-                step = 1.0;
-                end = start;
-            }
-            2 => {
-                start = parts[0].parse().unwrap();
-                step = 1.0;
-                end = parts[1].parse().unwrap();
-            }
-            3 => {
-                start = parts[0].parse().unwrap();
-                step = parts[1].parse().unwrap();
-                end = parts[2].parse().unwrap();
-            }
-            _ => panic!("Invalid location format"),
-        }
-
+        let (start, step, end): (f64, f64, f64) = matlab_type_range(&self.location);
         let mut result = Vec::new();
         let mut current = start;
         while current <= end {
@@ -107,6 +98,23 @@ impl Task {
             current += step;
         }
         result
+    }
+}
+
+pub fn matlab_type_range<T: std::str::FromStr<Err = E> + Copy, E: std::fmt::Debug>(
+    string: &str,
+) -> (T, T, T) {
+    let parts: Vec<&str> = string.split(':').collect();
+    let start: T = parts[0].parse().unwrap();
+
+    match parts.len() {
+        1 => (start, "1".parse().unwrap(), start),
+        2 => (start, "1".parse().unwrap(), parts[1].parse().unwrap()),
+        3 => (start, parts[1].parse().unwrap(), parts[2].parse().unwrap()),
+        _ => {
+            log::error!("无法转换 \"{string}\" 为matlab的范围");
+            panic!()
+        }
     }
 }
 

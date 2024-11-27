@@ -1,7 +1,7 @@
 //! 包含从ldc1614::Ldc得到对应通道代码的结构。最后的形式是从一个tokio的广播结构发送数据
 
 use super::{Error, Result};
-
+use std::collections::HashMap;
 use tokio::sync::{self, broadcast};
 
 pub struct Channel<const ADDR: u8> {
@@ -10,8 +10,6 @@ pub struct Channel<const ADDR: u8> {
     channel: ldc1614::Channel,
     rx: broadcast::Sender<super::Record>,
 }
-
-use crate::config;
 
 impl<const ADDR: u8> Channel<ADDR> {
     pub fn from(
@@ -50,12 +48,6 @@ impl<const ADDR: u8> Channel<ADDR> {
             },
             Channel,
         };
-
-        use std::collections::HashMap;
-        let register: HashMap<_, _> = register
-            .into_iter()
-            .map(|config::Register { field, value }| (field.to_uppercase(), value))
-            .collect();
 
         let (ldc, mut i2c) = tokio::join!(self.ldc.lock(), self.i2c.lock());
         ldc.register

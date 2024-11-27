@@ -149,10 +149,43 @@ async fn main() -> Result<()> {
                 channel::Channel::from(task.channel(), tx.clone(), ldc.clone(), i2c.clone());
             let register = task.registers.clone().unwrap();
             use std::collections::HashMap;
-            let register: HashMap<_, _> = register
+            let mut settlecount = String::new();
+            let mut rcount = String::new();
+            let register: HashMap<String, u16> = register
                 .into_iter()
-                .map(|config::Register { field, value }| (field.to_uppercase(), value))
+                .filter_map(|config::Register { field, value }| match value.parse() {
+                    Ok(value) => Some((field.to_uppercase(), value)),
+                    Err(_) => {
+                        match field.to_uppercase().as_str() {
+                            "SETTLECOUNT" => {
+                                settlecount = value;
+                            }
+                            "RCOUNT" => {
+                                rcount = value;
+                            }
+                            _ => {
+                                error!("无法对 {} 进行批量检测", field);
+                                panic!()
+                            }
+                        }
+                        None
+                    }
+                })
                 .collect();
+
+            let settlecount = config::matlab_type_range::<u16, _>(&settlecount);
+            let rcount = config::matlab_type_range::<u16, _>(&rcount);
+
+            for settlecount in (settlecount.0..settlecount.2).step_by(settlecount.1 as usize) {
+                for rcount in (rcount.0..rcount.2).step_by(rcount.1 as usize) {}
+            }
+
+            // for settlecount_value in
+
+            // 找到基础设置
+
+            //计算
+
             let _ = join!(motor.goto(postion), channel.apply_reg_config(register));
             let mark: Arc<str> = Arc::from(format!("postion:{postion}"));
             for times in 0..task.count {

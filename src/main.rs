@@ -147,10 +147,13 @@ async fn main() -> Result<()> {
         for postion in task.position() {
             let mut channel =
                 channel::Channel::from(task.channel(), tx.clone(), ldc.clone(), i2c.clone());
-            let _ = join!(
-                motor.goto(postion),
-                channel.apply_reg_config(task.registers())
-            );
+            let register = task.registers.clone().unwrap();
+            use std::collections::HashMap;
+            let register: HashMap<_, _> = register
+                .into_iter()
+                .map(|config::Register { field, value }| (field.to_uppercase(), value))
+                .collect();
+            let _ = join!(motor.goto(postion), channel.apply_reg_config(register));
             let mark: Arc<str> = Arc::from(format!("postion:{postion}"));
             for times in 0..task.count {
                 match channel.submit(Some(mark.clone())).await {

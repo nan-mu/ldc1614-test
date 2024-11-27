@@ -42,7 +42,7 @@ impl<const ADDR: u8> Channel<ADDR> {
             mark,
         })?)
     }
-    pub async fn apply_reg_config(&mut self, register: Vec<config::Register>) -> Result<()> {
+    pub async fn apply_reg_config(&mut self, register: HashMap<String, u16>) -> Result<()> {
         use ldc1614::{
             bitmap::{
                 CLOCK_DIVIDERSx, DRIVE_CURRENTx, OFFSETx, RCOUNTx, SETTLECOUNTx, CONFIG,

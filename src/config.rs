@@ -65,9 +65,6 @@ async fn test_yml() {
 }
 
 impl Task {
-    pub fn registers(&self) -> Vec<Register> {
-        self.registers.clone()
-    }
     pub fn channel(&self) -> ldc1614::Channel {
         match self.channel {
             0 => ldc1614::Channel::Zero,

@@ -18,20 +18,20 @@ services:
     #   - linux/arm64
     networks:
       - devnet
-  redis-stack:
-    container_name: redis-stack
-    # platforms:
-    #   - linux/arm64
-    ports:
-      - 6379:6379
-      - 8001:8001
-    environment:
-      - REDIS_ARGS=--requirepass mypassword
-    image: redis/redis-stack:latest
-    networks:
-      - devnet
-    volumes:
-      - redis_data:/data # 持久化存储数据
+  # redis-stack:
+  #   container_name: redis-stack
+  #   # platforms:
+  #   #   - linux/arm64
+  #   ports:
+  #     - 6379:6379
+  #     - 8001:8001
+  #   environment:
+  #     - REDIS_ARGS=--requirepass mypassword
+  #   image: redis/redis-stack:latest
+  #   networks:
+  #     - devnet
+  #   volumes:
+  #     - redis_data:/data # 持久化存储数据
 
 networks:
   devnet:

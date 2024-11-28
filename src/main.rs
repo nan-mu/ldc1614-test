@@ -194,7 +194,7 @@ async fn main() -> Result<()> {
                     let _ = (&mut register).insert("RCOUNT".to_string(), rcount);
                     channel.apply_reg_config(&register).await.unwrap();
                     let mark: Arc<str> = Arc::from(format!(
-                        "\"postion:{postion},settlecount:{settlecount},rcount:{rcount}\""
+                        "postion:{postion},settlecount:{settlecount},rcount:{rcount}"
                     ));
                     for times in 0..task.count {
                         time::sleep(Duration::from_millis((settlecount / 10) as u64)).await;

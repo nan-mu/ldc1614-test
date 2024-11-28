@@ -145,13 +145,16 @@ async fn main() -> Result<()> {
     debug!("开始进行测试");
     for task in config.tasks {
         for postion in task.position() {
+            // 启动电机
+            let moter_ok = motor.goto(postion);
+
             let mut channel =
                 channel::Channel::from(task.channel(), tx.clone(), ldc.clone(), i2c.clone());
             let register = task.registers.clone().unwrap();
             use std::collections::HashMap;
             let mut settlecount = String::new();
             let mut rcount = String::new();
-            let register: HashMap<String, u16> = register
+            let mut register: HashMap<String, u16> = register
                 .into_iter()
                 .filter_map(|config::Register { field, value }| match value.parse() {
                     Ok(value) => Some((field.to_uppercase(), value)),
@@ -173,30 +176,33 @@ async fn main() -> Result<()> {
                 })
                 .collect();
 
+            // 字符串转range
             let settlecount = config::matlab_type_range::<u16, _>(&settlecount);
+            let settlecount = (settlecount.0..settlecount.2).step_by(settlecount.1 as usize);
             let rcount = config::matlab_type_range::<u16, _>(&rcount);
+            let rcount_range = (rcount.0..rcount.2).step_by(rcount.1 as usize);
 
-            for settlecount in (settlecount.0..settlecount.2).step_by(settlecount.1 as usize) {
-                for rcount in (rcount.0..rcount.2).step_by(rcount.1 as usize) {}
-            }
+            // 等到电机就位
+            moter_ok.await.unwrap();
 
-            // for settlecount_value in
-
-            // 找到基础设置
-
-            //计算
-
-            let _ = join!(motor.goto(postion), channel.apply_reg_config(register));
-            let mark: Arc<str> = Arc::from(format!("postion:{postion}"));
-            for times in 0..task.count {
-                match channel.submit(Some(mark.clone())).await {
-                    Ok(_) => debug!("测量成功"),
-                    Err(e) => error!("测量第 {} 次失败: {:?}", times, e),
-                };
+            // 拼接寄存器并拉取数据
+            for settlecount in settlecount {
+                let _ = (&mut register).insert("SETTLECOUNT".to_string(), settlecount);
+                for rcount in rcount_range.clone() {
+                    let _ = (&mut register).insert("RCOUNT".to_string(), rcount);
+                    channel.apply_reg_config(&register).await.unwrap();
+                    let mark: Arc<str> = Arc::from(format!(
+                        "\"postion:{postion},settlecount:{settlecount},rcount:{rcount}\""
+                    ));
+                    for times in 0..task.count {
+                        match channel.submit(Some(mark.clone())).await {
+                            Ok(_) => debug!("测量成功"),
+                            Err(e) => error!("postion:{postion},settlecount:{settlecount},rcount:{rcount}，测量第 {} 次失败: {:?}", times, e),
+                        };
+                    }
+                }
             }
         }
-
-        // channel.submit()
     }
 
     info!("测试任务完成，电机正在归位");

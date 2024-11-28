@@ -1,8 +1,8 @@
 use super::Result;
-//舵机配置工作模式：#000PMOD3!，
-
 use log::debug;
 use rppal::uart;
+use tokio::time::{self, Duration}; // 确保 Result 正确导入
+
 pub struct Servo {
     uart: uart::Uart,
     position: f64,
@@ -18,62 +18,54 @@ impl Servo {
 
     pub async fn goto(&mut self, target: f64) -> Result<()> {
         debug!("舵机从 {}度 移动到 {}度", self.position, target);
-        self.moving(target /*- self.position*/).await?;//转到target的位置
-        self.position = target;
-        Ok(())
-    }
 
-    async fn moving(&mut self, target: f64) -> Result<()> {
-        use tokio::time::{self, Duration};
-        let scale=0.09;//范围 500-2500 对应的舵机角度就是 0-180 度,一个单位是0.09度
-        let ID="000P";
-        let mut pwm=target/scale+500;//pwm与所转角度的公式,
-        let pwm_str = format!("{:04}", pwm as u32);
-        
-        let mut send_data=format!("#000P{}T0100!", pwm_str);//ID号+pwm+时间的指令拼接
-        let stop="#000PDPT!";//定义暂停指令，是一个字符串
+        const SCALE: f64 = 0.09; // 范围 500-2500 对应的舵机角度就是 0-180 度，一个单位是 0.09 度
+        const STOP: &'static str = "#000PDPT!"; // 定义暂停指令
+
+        // 计算并格式化发送的数据
+        let send_data = format!(
+            "#000P{:04}T0100!",
+            ((target / SCALE) + 500.0).round() as u32
+        );
+
         // 发送数据
-        
-        uart.write(send_data)?;
+        self.uart.write(send_data.as_bytes())?;
+        println!("Data sent: {:?}", send_data);
 
-        println!("Data sent: {:?}",send_data);
+        // 假设 time 是一个延迟时间，你可以根据需要调整这个值
+        let delay_time_ms: u64 = 100; // 延时100ms
+        time::sleep(Duration::from_millis(delay_time_ms as u64)).await;
 
-      
-        // 异步等待滑轨前进指定距离
-        time::sleep(Duration::from_secs_f64(time / 1000)).await;
-        // 停止 PWM 输出
-        uart.write(stop)?;
+        // 发送停止指令
+        self.uart.write(STOP.as_bytes())?;
+        println!("Stop: {:?}", STOP);
 
-        println!("stop: {:?}", stop);
+        // 更新舵机位置
+        self.position = target;
+
         Ok(())
     }
 
     pub fn set_position(&mut self, position: f64) {
-        self.position = position;//初始的角度
+        self.position = position; // 更新舵机的角度
     }
 }
 
-use rppal::uart::{Uart, Settings};
+//use rppal::uart::{Settings, Uart};
+// fn uart_init() -> Result<(), Box<dyn std::error::Error>> {
+//     // 创建串口设置
+//     let settings = Settings {
+//         baudrate: 115200,
+//         bytesize: uart::ByteSize::Eight,
+//         parity: uart::Parity::None,
+//         stopbits: uart::StopBits::One,
+//     };
 
-fn uart_init() -> Result<(), Box<dyn std::error::Error>> {
-    // 创建串口设置
-    let settings = Settings {
-        baudrate: 115200,
-        bytesize: uart::ByteSize::Eight,
-        parity: uart::Parity::None,
-        stopbits: uart::StopBits::One,
-    };
+//     // 打开串口（比如使用 /dev/serial0）
+//     let mut uart = Uart::new("/dev/serial0", &settings)?;
 
-    // 打开串口（比如使用 /dev/serial0）
-    let mut uart = Uart::new("/dev/serial0", &settings)?;
-
-  
-
-    Ok(())
-}
-
-
-
+//     Ok(())
+// }
 
 #[tokio::test]
 async fn test_goto() {
@@ -88,5 +80,3 @@ async fn test_goto() {
     motor.goto(0.0).await.unwrap();
     assert_eq!(motor.position, 0.0);
 }
-
-

@@ -19,7 +19,7 @@ struct Args {
     config: String,
 }
 
-use std::sync;
+use std::{sync, time::Duration};
 
 #[derive(Debug, Clone)]
 struct Record {
@@ -52,7 +52,7 @@ pub enum Error {
     Database(#[from] fred::error::RedisError),
 }
 
-use tokio::sync::broadcast;
+use tokio::{sync::broadcast, time};
 impl From<broadcast::error::SendError<Record>> for Error {
     fn from(_value: broadcast::error::SendError<Record>) -> Self {
         Error::ProducerJoinError
@@ -197,6 +197,7 @@ async fn main() -> Result<()> {
                         "\"postion:{postion},settlecount:{settlecount},rcount:{rcount}\""
                     ));
                     for times in 0..task.count {
+                        time::sleep(Duration::from_millis((settlecount / 10) as u64)).await;
                         match channel.submit(Some(mark.clone())).await {
                             Ok(_) => debug!("测量成功"),
                             Err(e) => error!("postion:{postion},settlecount:{settlecount},rcount:{rcount}，测量第 {} 次失败: {:?}", times, e),

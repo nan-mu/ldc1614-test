@@ -1,16 +1,10 @@
-use std::fmt::Debug;
+use std::{collections::HashMap, fmt::Debug};
 
 use crate::Result;
 
-#[derive(Debug, serde::Deserialize, PartialEq, Eq, Clone)]
-pub struct Register {
-    pub field: String,
-    pub value: String,
-}
-
 #[derive(Debug, serde::Deserialize)]
 pub struct Task {
-    pub registers: Option<Vec<Register>>,
+    pub registers: Option<HashMap<String, String>>,
     channel: u8,
     pub count: usize,
     location: String,
@@ -48,8 +42,29 @@ impl Config {
         match config {
             Ok(mut config) => {
                 config.tasks.iter_mut().for_each(|task| {
-                    if let Some(_) = &task.registers {
-                        todo!("检查是否所有寄存器设置选项都支持");
+                    if let Some(registers) = &mut task.registers {
+                        use log::debug;
+                        if !registers.contains_key("offset") {
+                            debug!("自动补充offset为0x0");
+                            registers.insert("offset".to_string(), "0".to_string());
+                        }
+                        if !registers.contains_key("fin_divider") {
+                            debug!("自动补充fin_divider为0x1");
+                            registers.insert("fin_divider".to_string(), "1".to_string());
+                        }
+                        if !registers.contains_key("fref_divider") {
+                            debug!("自动补充fref_divider为0x2");
+                            registers.insert("fref_divider".to_string(), "2".to_string());
+                        }
+                        if !registers.contains_key("deglitch") {
+                            debug!("自动补充deglitch为0x1");
+                            registers.insert("deglitch".to_string(), "1".to_string());
+                        }
+                        if !registers.contains_key("LC_sensor_drive_current") {
+                            debug!("自动补充LC_sensor_drive_current为0x1f");
+                            registers
+                                .insert("LC_sensor_drive_current".to_string(), "31".to_string());
+                        }
                     }
                 });
                 Ok(config)

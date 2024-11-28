@@ -52,7 +52,7 @@ pub enum Error {
     Database(#[from] fred::error::RedisError),
 }
 
-use tokio::{join, sync::broadcast};
+use tokio::sync::broadcast;
 impl From<broadcast::error::SendError<Record>> for Error {
     fn from(_value: broadcast::error::SendError<Record>) -> Self {
         Error::ProducerJoinError
@@ -152,11 +152,13 @@ async fn main() -> Result<()> {
                 channel::Channel::from(task.channel(), tx.clone(), ldc.clone(), i2c.clone());
             let register = task.registers.clone().unwrap();
             use std::collections::HashMap;
+
+            // 提取特殊设置字符串
             let mut settlecount = String::new();
             let mut rcount = String::new();
             let mut register: HashMap<String, u16> = register
                 .into_iter()
-                .filter_map(|config::Register { field, value }| match value.parse() {
+                .filter_map(|(field, value)| match value.parse() {
                     Ok(value) => Some((field.to_uppercase(), value)),
                     Err(_) => {
                         match field.to_uppercase().as_str() {
@@ -167,7 +169,7 @@ async fn main() -> Result<()> {
                                 rcount = value;
                             }
                             _ => {
-                                error!("无法对 {} 进行批量检测", field);
+                                error!("无法对 {} 进行批量测试", field);
                                 panic!()
                             }
                         }
@@ -202,6 +204,8 @@ async fn main() -> Result<()> {
                     }
                 }
             }
+            info!("测试任务完成，电机正在归位");
+            motor.goto(0.0).await.unwrap();
         }
     }
 

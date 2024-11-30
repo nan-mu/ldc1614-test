@@ -92,7 +92,7 @@ impl Task {
         let (start, step, end): (f64, f64, f64) = matlab_type_range(&self.location);
         let mut result = Vec::new();
         let mut current = start;
-        while current <= end {
+        while current < end {
             result.push(current);
             current += step;
         }

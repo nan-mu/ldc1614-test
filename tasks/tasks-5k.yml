@@ -9,4 +9,4 @@ tasks:
       settlecount: "90"
     channel: 2
     count: 5000
-    location: "0:50" # 毫米
+    location: "0:10" # 毫米

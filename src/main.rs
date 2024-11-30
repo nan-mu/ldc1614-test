@@ -206,11 +206,11 @@ async fn main() -> Result<()> {
                 }
             }
             info!("测试任务完成，电机正在归位");
-            motor.goto(0.0).await.unwrap();
+            motor.goto(-1.0).await.unwrap();
         }
     }
 
     info!("测试任务完成，电机正在归位");
-    motor.goto(0.0).await.unwrap();
+    motor.goto(-1.0).await.unwrap();
     Ok(())
 }

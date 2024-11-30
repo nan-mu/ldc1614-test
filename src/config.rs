@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Debug};
+use std::{collections::HashMap, fmt::Debug, ops::Add};
 
 use crate::Result;
 
@@ -77,22 +77,6 @@ impl Config {
     }
 }
 
-#[tokio::test]
-async fn test_yml() {
-    use std::path::Path;
-    if !Path::new("/workspaces/tasks.yml").exists() {
-        panic!("配置文件不存在");
-    }
-
-    match Config::read_config("/workspaces/tasks.yml") {
-        Ok(config) => {
-            println!("{:?}", config);
-            assert!(config.tasks.len() > 0, "任务列表不能为空");
-        }
-        Err(e) => panic!("读取配置文件失败: {}", e),
-    }
-}
-
 impl Task {
     pub fn channel(&self) -> ldc1614::Channel {
         match self.channel {
@@ -116,16 +100,27 @@ impl Task {
     }
 }
 
-pub fn matlab_type_range<T: std::str::FromStr<Err = E> + Copy, E: std::fmt::Debug>(
+pub fn matlab_type_range<
+    T: std::str::FromStr<Err = E> + Copy + Add<Output = T>,
+    E: std::fmt::Debug,
+>(
     string: &str,
 ) -> (T, T, T) {
     let parts: Vec<&str> = string.split(':').collect();
     let start: T = parts[0].parse().unwrap();
 
     match parts.len() {
-        1 => (start, "1".parse().unwrap(), start),
-        2 => (start, "1".parse().unwrap(), parts[1].parse().unwrap()),
-        3 => (start, parts[1].parse().unwrap(), parts[2].parse().unwrap()),
+        1 => (start, "1".parse().unwrap(), start + "1".parse().unwrap()),
+        2 => (
+            start,
+            "1".parse().unwrap(),
+            parts[1].parse::<T>().unwrap() + "1".parse().unwrap(),
+        ),
+        3 => (
+            start,
+            parts[1].parse().unwrap(),
+            parts[2].parse::<T>().unwrap() + "1".parse().unwrap(),
+        ),
         _ => {
             log::error!("无法转换 \"{string}\" 为matlab的范围");
             panic!()
@@ -133,20 +128,43 @@ pub fn matlab_type_range<T: std::str::FromStr<Err = E> + Copy, E: std::fmt::Debu
     }
 }
 
-// pub fn write_register_from_yml(ldc: Ldc, config: Task) {
-//     use ldc1614::bitmap::LdcRegister;
-//     for reg in config.registers {
-//         match reg.field.as_str() {
-//             "rcountx" => {
-//                 let val = reg.value as u16;
-//                 LdcRegister.rcountx.0.write(val);
-//             }
-//             "offsetx" => {
-//                 let val = reg.value as u16;
-//                 LdcRegister.rcountx.0.write(val);
-//             }
-//             "settlecountx" => {}
-//             "clock_dividersx" => {}
-//         }
-//     }
-// }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_yml() {
+        use std::path::Path;
+        if !Path::new("/workspaces/tasks/task-example.yml").exists() {
+            panic!("配置文件不存在");
+        }
+
+        match Config::read_config("/workspaces/tasks/task-example.yml") {
+            Ok(config) => {
+                println!("{:?}", config);
+                assert!(config.tasks.len() > 0, "任务列表不能为空");
+            }
+            Err(e) => panic!("读取配置文件失败: {}", e),
+        }
+    }
+
+    #[test]
+    fn test_matlab_type_range_single_value() {
+        let input = "10";
+        let expected_output = (10, 1, 11);
+        assert_eq!(matlab_type_range(input), expected_output);
+        let input = "10:20";
+        let expected_output = (10, 1, 21);
+        assert_eq!(matlab_type_range(input), expected_output);
+        let input = "10:2:20";
+        let expected_output = (10, 2, 21);
+        assert_eq!(matlab_type_range(input), expected_output);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_matlab_type_range_invalid_format() {
+        let input = "10:20:30:40";
+        matlab_type_range::<i32, _>(input);
+    }
+}

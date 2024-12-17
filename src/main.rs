@@ -1,75 +1,225 @@
-// i2c_ds3231.rs - Sets and retrieves the time on a Maxim Integrated DS3231
-// RTC using I2C.
+//! 自动化测试ldc1614
 
-use std::error::Error;
-use std::thread;
-use std::time::Duration;
+mod channel;
+mod config;
+mod handler;
+mod motor;
 
-use ldc1x1x as ldc;
-use rppal::i2c::{self, I2c};
+use clap::Parser;
+use log::{error, info};
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
+struct Args {
+    /// 日志等级
+    #[clap(short, long, default_value = "debug")]
+    log_level: String,
 
-//ADDR接地时ldc1614的地址
-const ADDR_LDC1614: u16 = 0x2A;
-
-// Helper functions to encode and decode binary-coded decimal (BCD) values.
-fn bcd2dec(bcd: u8) -> u8 {
-    (((bcd & 0xF0) >> 4) * 10) + (bcd & 0x0F)
+    /// 配置文件路径
+    #[clap(short, long, default_value = "tasks.yml")]
+    config: String,
 }
 
-fn dec2bcd(dec: u8) -> u8 {
-    ((dec / 10) << 4) | (dec % 10)
+use std::{sync, time::Duration};
+
+#[derive(Debug, Clone)]
+struct Record {
+    /// 时间戳
+    timestamp: chrono::DateTime<chrono::Local>,
+    /// 数据
+    data: u32,
+    /// 通道
+    channel: ldc1614::Channel,
+    /// 可选的标记
+    mark: Option<sync::Arc<str>>,
 }
 
-fn main() {
-    let mut i2c = I2c::new()?;
+use rppal::gpio;
+use thiserror::Error;
 
-    i2c.set_slave_address(ADDR_LDC1614)?;
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("gpio使用错误: {0}")]
+    Gpio(#[from] gpio::Error),
+    #[error("ldc1614错误")]
+    Ldc1614(ldc1614::Error),
+    #[error("生产者发现通道已被关闭")]
+    ProducerError,
+    #[error("生产者无法获得i2c和ldc互斥锁")]
+    ProducerJoinError,
+    #[error("配置文件填写错误")]
+    ConfigError,
+    #[error("数据库错误: {0}")]
+    Database(#[from] fred::error::RedisError),
+}
 
-    //创建实例，初始化LDC设备
-    let mut ldc = ldc::Ldc::new(i2c, ADDR_LDC1614);
+use tokio::{sync::broadcast, time};
+impl From<broadcast::error::SendError<Record>> for Error {
+    fn from(_value: broadcast::error::SendError<Record>) -> Self {
+        Error::ProducerJoinError
+    }
+}
 
-    ldc.set_sleep_mode(true).unwrap();
+type Result<T> = core::result::Result<T, Error>;
 
-    ldc.reset().unwrap();
+#[tokio::main]
+async fn main() -> Result<()> {
+    let args = Args::parse();
 
-    //计算分频，这里需要理论计算
-    let div = ldc::Fsensor::from_inductance_capacitance(12.583, 100.0).to_clock_dividers(None);
+    // 初始化日志
+    use env_logger::Builder;
+    use log::debug;
+    use std::str::FromStr;
+    Builder::from_default_env()
+        .filter(
+            None,
+            log::LevelFilter::from_str(&args.log_level.to_uppercase())
+                .unwrap_or(log::LevelFilter::Debug),
+        )
+        .init();
 
-    //配置传感器
-    for ch in [ldc::Channel::Zero] {
-        //为指定通道设置时钟分频器，这一参数控制采样速度，影响数据读取的频率。
-        //ldc.set_clock_dividers(ch, div).unwrap();
-        ldc.set_clock_dividers(ch, div).unwrap();
+    debug!("读取配置文件");
+    use config::Config;
+    let config = Config::read_config(&args.config).unwrap();
 
-        //设置转换稳定时间（settling time）为 40 个时钟周期。等待一段时间以确保信号稳定。
-        ldc.set_conv_settling_time(ch, 40).unwrap();
+    debug!("初始化i2c设备");
+    use ldc1614::{bitmap::MANUFCTURER_ID, Ldc};
+    use rppal::i2c::I2c;
+    use tokio::sync::Mutex;
+    let mut i2c: I2c = I2c::new().unwrap();
+    let ldc = Ldc::<0x2b>::new(&mut i2c);
+    let manufcturer_id = ldc
+        .register
+        .manufcturer_id
+        .read(&mut i2c, MANUFCTURER_ID::manufcturer_id);
+    debug!("制造商id: {}", manufcturer_id);
+    let ldc = Arc::new(Mutex::new(ldc));
+    let i2c = Arc::new(Mutex::new(i2c));
 
-        //设置参考计数转换间隔
-        ldc.set_ref_count_conv_interval(ch, 0x0546).unwrap();
+    debug!("初始化gpio");
+    use motor::Motor;
+    use rppal::gpio::Gpio;
+    let gpio = Gpio::new()
+        .map_err(|e| {
+            error!(
+                "GPIO 初始化失败: {:?}。考虑运行：`sudo chown $USER /dev/*`",
+                e
+            );
+            std::process::exit(1);
+        })
+        .unwrap();
+    let pwm = gpio.get(21).unwrap().into_output_low();
+    let dir = gpio.get(12).unwrap().into_output_high();
+    let mut motor = Motor::new(pwm, dir);
+    info!("电机初始位置为 {}mm", config.tasks[0].position()[0]);
+    motor.set_position(config.tasks[0].position()[0]);
 
-        //设置传感器驱动电流。这里的 0b01110 是一个二进制值，表示所需的电流设置
-        ldc.set_sensor_drive_current(ch, 0b01110).unwrap();
+    debug!("创建广播通道");
+    use handler::Consumer;
+    use std::{path::Path, sync::Arc};
+    use tokio::sync::broadcast;
+    let (tx, _) = broadcast::channel(512);
+
+    let mut rx = vec![];
+    if let Some(csv) = config.csv {
+        debug!("发现csv配置");
+        rx.push((
+            Consumer::Csv {
+                path: csv.path.map(|p| Arc::from(Path::new(&p))),
+            },
+            tx.subscribe(),
+        ));
     }
 
-    //配置 LDC1614 设备的多路复用器，使用单通道时with_auto_scan值为false
-    //设置去抖动滤波器带宽为 3.3 MHz
-    ldc.set_mux_config(
-        ldc::MuxConfig::default()
-            .with_auto_scan(false)
-            .with_deglitch_filter_bandwidth(ldc::Deglitch::ThreePointThreeMHz),
-    )
-    .unwrap();
-    ldc.set_config(ldc::Config::default()).unwrap();
-    ldc.set_error_config(
-        ldc::ErrorConfig::default().with_amplitude_high_error_to_data_register(true),
-    )
-    .unwrap();
-
-    ldc.set_sleep_mode(true).unwrap();
-
-    // timing ignored because polling with a cp2112 with no delays is slow enough already
-    // outputting just newline separated numbers so you can feed it into https://github.com/mogenson/ploot
-    loop {
-        println!("{}", ldc.read_data_24bit(ldc::Channel::Zero).unwrap(),);
+    if let Some(redis) = config.redis {
+        debug!("发现redis配置");
+        rx.push((
+            Consumer::Redis {
+                url: redis.url.into(),
+            },
+            tx.subscribe(),
+        ));
     }
+
+    handler::Handler { rx }.submit().await.unwrap();
+
+    debug!("开始进行测试");
+    for task in config.tasks {
+        for postion in task.position() {
+            // 启动电机
+            let moter_ok = motor.goto(postion);
+
+            let mut channel =
+                channel::Channel::from(task.channel(), tx.clone(), ldc.clone(), i2c.clone());
+            let register = task.registers.clone().unwrap();
+            use std::collections::HashMap;
+
+            // 提取特殊设置字符串
+            let mut settlecount = String::new();
+            let mut rcount = String::new();
+            let mut register: HashMap<String, u16> = register
+                .into_iter()
+                .filter_map(|(field, value)| match value.parse() {
+                    Ok(value) => Some((field.to_uppercase(), value)),
+                    Err(_) => {
+                        debug!("特殊设置寄存器 {field}: {value}");
+                        match field.to_uppercase().as_str() {
+                            "SETTLECOUNT" => {
+                                settlecount = value;
+                            }
+                            "RCOUNT" => {
+                                rcount = value;
+                            }
+                            _ => {
+                                error!("无法对 {} 进行批量测试", field);
+                                panic!()
+                            }
+                        }
+                        None
+                    }
+                })
+                .collect();
+
+            // TODO: 太丑陋了这里，之后改改
+            if settlecount.is_empty() {
+                settlecount = register.get("SETTLECOUNT").unwrap().to_string();
+            }
+            if rcount.is_empty() {
+                rcount = register.get("RCOUNT").unwrap().to_string();
+            }
+
+            // 字符串转range
+            let settlecount = config::matlab_type_range::<u16, _>(&settlecount);
+            let settlecount = (settlecount.0..settlecount.2).step_by(settlecount.1 as usize);
+            let rcount = config::matlab_type_range::<u16, _>(&rcount);
+            let rcount_range = (rcount.0..rcount.2).step_by(rcount.1 as usize);
+
+            // 等到电机就位
+            moter_ok.await.unwrap();
+
+            // 拼接寄存器并拉取数据
+            for settlecount in settlecount {
+                let _ = (&mut register).insert("SETTLECOUNT".to_string(), settlecount);
+                for rcount in rcount_range.clone() {
+                    let _ = (&mut register).insert("RCOUNT".to_string(), rcount);
+                    channel.apply_reg_config(&register).await.unwrap();
+                    let mark: Arc<str> = Arc::from(format!(
+                        "postion:{postion},settlecount:{settlecount},rcount:{rcount}"
+                    ));
+                    for times in 0..task.count {
+                        time::sleep(Duration::from_millis((settlecount / 10) as u64)).await;
+                        match channel.submit(Some(mark.clone())).await {
+                            Ok(_) => debug!("测量成功"),
+                            Err(e) => error!("postion:{postion},settlecount:{settlecount},rcount:{rcount}，测量第 {} 次失败: {:?}", times, e),
+                        };
+                    }
+                }
+            }
+            info!("测试任务完成，电机正在归位");
+            motor.goto(-1.0).await.unwrap();
+        }
+    }
+
+    info!("测试任务完成，电机正在归位");
+    motor.goto(-1.0).await.unwrap();
+    Ok(())
 }

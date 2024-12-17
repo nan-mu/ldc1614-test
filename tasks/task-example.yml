@@ -1,0 +1,34 @@
+# config.yml
+
+# CSV配置
+csv:
+  # path不填写时，会在运行文件夹下创建一个data_<时间>.csv文件
+  path: "data.csv"
+
+tasks:
+  - registers:
+      rcount: "1160"
+      settlecount: "90"
+    channel: 2
+    count: 50
+    location: "0:50" # 毫米
+
+# Redis配置
+# redis:
+#   # TODO: 完善redis细致配置
+#   url: "redis://:mypassword@127.0.0.1:6379"
+
+# 任务列表
+# 以下为支持的测试实例，部分测试在缺省时将自动填充以下值
+# tasks:
+#   - registers:
+      # rcount: "1160"                # 原值: 0x0488 可选最大范围0-65535
+#       offset: "0"                   # 原值: 0
+#       settlecount: "90"             # 原值: 0x5a 可选最大范围0-65535
+#       fin_divider: "1"              # 原值: 0b1
+#       fref_divider: "2"             # 原值: 0b10
+#       deglitch: "1"                 # 原值: 0b001
+#       LC_sensor_drive_current: "31" # 原值: 0b11111
+#     channel: 2
+#     count: 100
+#     location: "0:50" # 毫米

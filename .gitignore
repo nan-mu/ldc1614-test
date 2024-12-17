@@ -3,3 +3,4 @@ node_modules
 Cargo.lock
 temp.patch
 data*
+*.pdf

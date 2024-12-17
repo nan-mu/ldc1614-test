@@ -31,6 +31,7 @@ impl<const ADDR: u8> Channel<ADDR> {
     pub async fn submit(&self, mark: Option<std::sync::Arc<str>>) -> Result<usize> {
         use chrono::Local;
         let (ldc, mut i2c) = tokio::join!(self.ldc.lock(), self.i2c.lock());
+        // TODO: 在这里修改一下这个函数，符合你定义的表头
         Ok(self.rx.send(crate::Record {
             timestamp: Local::now(),
             data: ldc

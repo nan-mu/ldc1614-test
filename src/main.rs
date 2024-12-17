@@ -21,7 +21,7 @@ struct Args {
 
 use std::{sync, time::Duration};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone)] // TODO: 在这里是目前我的csv文件的格式，但结构体是固定的。好处就是方便维护。我还是希望新的csv文件格式采用这种形式（而不是字符串），对于目前的两个应用场景，准备两个就好，或许，这些不同的结构体能抽象成一个模块，见下面的例子
 struct Record {
     /// 时间戳
     timestamp: chrono::DateTime<chrono::Local>,
@@ -31,6 +31,30 @@ struct Record {
     channel: ldc1614::Channel,
     /// 可选的标记
     mark: Option<sync::Arc<str>>,
+}
+
+mod csv_head{
+    // TODO: 当然你会发现需要一个逻辑来判断使用何种类型，这个后面我来补充吧，或者你们挑战一下？
+    // TODO: 之后和记录相关的内容要移动到handler.rs或者一个新文件中
+    // TODO: 关于选用何种格式，或许能试试直接在配置文件中指定，张鑫的部分也涉及到读取配置文件，你们或许可以尝试一下，这方面的设置在config.rs中
+    #[derive(Debug, Clone)] 
+    struct RecordA {
+        /// 电机位置
+        position: f64,
+        /// 数据
+        data: u32,
+    }
+    #[derive(Debug, Clone)] 
+    struct RecordB {
+        /// 数据
+        data: u32,
+        /// 电机位置
+        position: f64,
+        /// settlecount寄存器值
+        settlecount: u16,
+        /// rcount寄存器值
+        rcount: u16,
+    }
 }
 
 use rppal::gpio;

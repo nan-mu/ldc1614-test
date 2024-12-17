@@ -135,11 +135,11 @@ mod tests {
     #[test]
     fn test_yml() {
         use std::path::Path;
-        if !Path::new("/workspaces/tasks/task-example.yml").exists() {
+        if !Path::new("/workspaces/tasks/task-5k.yml").exists() {
             panic!("配置文件不存在");
         }
 
-        match Config::read_config("/workspaces/tasks/task-example.yml") {
+        match Config::read_config("/workspaces/tasks/task-5k.yml") {
             Ok(config) => {
                 println!("{:?}", config);
                 assert!(config.tasks.len() > 0, "任务列表不能为空");
@@ -150,11 +150,11 @@ mod tests {
 
     #[test]
     fn test_matlab_type_range_single_value() {
-        let input = "10";
-        let expected_output = (10, 1, 11);
+        let input = "1160";
+        let expected_output = (1160, 1, 1161);
         assert_eq!(matlab_type_range(input), expected_output);
-        let input = "10:20";
-        let expected_output = (10, 1, 21);
+        let input = "0:10";
+        let expected_output = (0, 1, 11);
         assert_eq!(matlab_type_range(input), expected_output);
         let input = "10:2:20";
         let expected_output = (10, 2, 21);

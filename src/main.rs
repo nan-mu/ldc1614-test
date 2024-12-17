@@ -161,6 +161,7 @@ async fn main() -> Result<()> {
                 .filter_map(|(field, value)| match value.parse() {
                     Ok(value) => Some((field.to_uppercase(), value)),
                     Err(_) => {
+                        debug!("特殊设置寄存器 {field}: {value}");
                         match field.to_uppercase().as_str() {
                             "SETTLECOUNT" => {
                                 settlecount = value;
@@ -177,6 +178,14 @@ async fn main() -> Result<()> {
                     }
                 })
                 .collect();
+
+            // TODO: 太丑陋了这里，之后改改
+            if settlecount.is_empty() {
+                settlecount = register.get("SETTLECOUNT").unwrap().to_string();
+            }
+            if rcount.is_empty() {
+                rcount = register.get("RCOUNT").unwrap().to_string();
+            }
 
             // 字符串转range
             let settlecount = config::matlab_type_range::<u16, _>(&settlecount);

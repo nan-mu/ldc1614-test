@@ -1,0 +1,12 @@
+# config.yml
+
+csv:
+  path: "data1k-71mm.csv"
+
+tasks:
+  - registers:
+      rcount: "1200"
+      settlecount: "9"
+    channel: 2
+    count: 1000
+    location: "0:71" # 毫米

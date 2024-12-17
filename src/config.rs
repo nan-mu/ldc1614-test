@@ -16,8 +16,12 @@ pub struct Redis {
 }
 
 #[derive(Debug, serde::Deserialize)]
-pub struct Csv {// TODO: 在这里添加日志轮转的配置项，配置完结构体后，去src/handler.rs添加日志轮转的代码
-    pub path: Option<String>,
+pub struct Csv {
+    // TODO: 在这里添加日志轮转的配置项，配置完结构体后，去src/handler.rs添加日志轮转的代码
+    pub path: Option<String>, // 存储日志文件路径
+
+    pub max_size: Option<u64>,    // 最大文件大小，单位：字节
+    pub max_files: Option<usize>, // 保留的最大日志文件数量
 }
 
 #[derive(Debug, serde::Deserialize)]

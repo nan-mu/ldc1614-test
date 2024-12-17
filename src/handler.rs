@@ -24,7 +24,7 @@ impl Handler {
     pub async fn submit(self) -> Result<()> {
         for (consumer, mut rx) in self.rx {
             match consumer {
-                Consumer::Csv { path } => {
+                Consumer::Csv { path } => {// TODO: 在这里处理逻辑。我建议你先把所有代码直接写在这里，写完后提醒我一下一起来看看哪些需要抽象成模块或者函数。文件的读写比较繁琐，你最好先看完这里已有的代码，经过我的测试能处理文件的大部分场景。
                     debug!("读取csv文件");
                     use chrono::Local;
                     let file = match path {

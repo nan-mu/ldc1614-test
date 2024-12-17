@@ -16,7 +16,7 @@ pub struct Redis {
 }
 
 #[derive(Debug, serde::Deserialize)]
-pub struct Csv {
+pub struct Csv {// TODO: 在这里添加日志轮转的配置项，配置完结构体后，去src/handler.rs添加日志轮转的代码
     pub path: Option<String>,
 }
 

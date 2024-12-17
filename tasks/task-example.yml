@@ -2,6 +2,7 @@
 
 # CSV配置
 csv:
+  # TODO: 你需要在这里设计文件轮转的参数，具体的参数结构体写好后提醒我一下。这里说的参数结构体位于src/config/rs:16
   # path不填写时，会在运行文件夹下创建一个data_<时间>.csv文件
   path: "data.csv"
 

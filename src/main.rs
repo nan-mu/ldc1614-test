@@ -179,7 +179,6 @@ async fn main() -> Result<()> {
                 })
                 .collect();
 
-            // TODO: 太丑陋了这里，之后改改
             if settlecount.is_empty() {
                 settlecount = register.get("SETTLECOUNT").unwrap().to_string();
             }

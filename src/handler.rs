@@ -90,39 +90,54 @@ impl Handler {
                         }
                     };
 
-                    #[derive(serde_derive::Serialize)]
-                    struct CsvRecord {
-                        /// 时间戳
-                        timestamp: chrono::DateTime<chrono::Local>,
-                        /// 数据
-                        data: u32,
-                        /// 通道
-                        channel: u8,
-                        /// 可选的标记
-                        mark: Option<String>,
-                    }
 
                     debug!("发布csv写入线程");
                     tokio::spawn(async move {
                         while let Ok(record) = rx.recv().await {
                             debug!("csv收到数据: {:?}", record);
-                            wtr.serialize(CsvRecord {// TODO: 这里是最终写入单个文件的地方
-                                mark: record
-                                    .mark
-                                    .clone()
-                                    .map(|mark| format!("{}", mark).replace("\n", "\\n")),
-                                timestamp: record.timestamp,
-                                channel: match record.channel {
-                                    Channel::Zero => 0,
-                                    Channel::One => 1,
-                                    Channel::Two => 2,
-                                    Channel::Three => 3,
-                                },
-                                data: record.data,
-                            })
-                            .unwrap_or_else(|err| {
-                                error!("写入csv文件失败, 数据为: {:?}, 错误: {:?}", record, err);
-                            });
+                            match record {
+                                // 处理 RecordA 类型的数据
+                                Record::A(record_a) => {
+                                    let csv_record_a = CsvRecordA {
+                                        mark: record_a.mark.clone().map(|mark| format!("{}", mark).replace("\n", "\\n")),
+                                        timestamp: record_a.timestamp.to_string(),
+                                        channel: match record_a.channel {
+                                            Channel::Zero => 0,
+                                            Channel::One => 1,
+                                            Channel::Two => 2,
+                                            Channel::Three => 3,
+                                        },
+                                        data: record_a.data,
+                                    };
+                
+                                    wtr.serialize(csv_record_a)
+                                        .unwrap_or_else(|err| {
+                                            error!("写入csv文件失败, 数据为: {:?}, 错误: {:?}", record_a, err);
+                                        });
+                                }
+                
+                                // 处理 RecordB 类型的数据
+                                Record::B(record_b) => {
+                                    let csv_record_b = CsvRecordB {
+                                        mark: record_b.mark.clone().map(|mark| format!("{}", mark).replace("\n", "\\n")),
+                                        timestamp: record_b.timestamp.to_string(),
+                                        channel: match record_b.channel {
+                                            Channel::Zero => 0,
+                                            Channel::One => 1,
+                                            Channel::Two => 2,
+                                            Channel::Three => 3,
+                                        },
+                                        data: record_b.data,
+                                        settlecount: record_b.settlecount,
+                                        rcount: record_b.rcount,
+                                    };
+                
+                                    wtr.serialize(csv_record_b)
+                                        .unwrap_or_else(|err| {
+                                            error!("写入csv文件失败, 数据为: {:?}, 错误: {:?}", record_b, err);
+                                        });
+                                }
+                            }
                         }
                     });
                 }
@@ -236,4 +251,62 @@ async fn test_redis() {
 
     use std::time::Duration;
     tokio::time::sleep(Duration::from_secs(5)).await;
+}
+
+mod  a{
+
+    // 定义选择的记录类型
+    #[derive(Debug, Clone)]
+    pub enum Record {
+        A(RecordA),  // 对应 RecordA
+        B(RecordB),  // 对应 RecordB
+    }
+    
+    // RecordA 和 RecordB 的结构体
+    #[derive(Debug, Clone)]
+    pub struct RecordA {
+        pub data: u32,                                   // 数据
+        pub channel: u8,                                 // 通道
+        pub mark: Option<sync::Arc<str>>,                 // 可选标记
+    }
+    
+    #[derive(Debug, Clone)]
+    pub struct RecordB {
+        pub data: u32,                                   // 数据
+        pub channel: u8,                                 // 通道
+        pub mark: Option<sync::Arc<str>>,                 // 可选标记
+        pub settlecount: u16,                            // settlecount寄存器值
+        pub rcount: u16,                                 // rcount寄存器值
+    }
+    
+    impl Record {
+    // 新的构造函数，分别为 RecordA 和 RecordB 提供专门的构造函数
+    pub fn new_a(data: u32, channel: u8, mark: Option<sync::Arc<str>>) -> Self {
+        Record::A(RecordA { data, channel, mark })
+    }
+
+    pub fn new_b(
+        data: u32,
+        channel: u8,
+        mark: Option<sync::Arc<str>>,
+        settlecount: u16,
+        rcount: u16,
+    ) -> Self {
+        Record::B(RecordB {
+            data,
+            channel,
+            mark,
+            settlecount,
+            rcount,
+        })
+    }
+
+    }
+    
+    // 定义选择的记录类型（只用于构造 Record）
+    #[derive(Debug, Clone)]
+    pub enum RecordType {
+        A,  // 对应 RecordA
+        B,  // 对应 RecordB
+    }
 }

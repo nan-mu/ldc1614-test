@@ -18,6 +18,7 @@ pub struct Redis {
 #[derive(Debug, serde::Deserialize)]
 pub struct Csv {
     pub path: Option<String>,
+    pub csv_type: Option<RecordType>,
 }
 
 #[derive(Debug, serde::Deserialize)]

@@ -28,19 +28,35 @@ impl<const ADDR: u8> Channel<ADDR> {
 }
 
 impl<const ADDR: u8> Channel<ADDR> {
-    pub async fn submit(&self, mark: Option<std::sync::Arc<str>>) -> Result<usize> {
+
+    pub async fn submit(
+        &self,
+        mark: Option<std::sync::Arc<str>>,
+        record_type: crate::RecordType,
+        settlecount: Option<u16>,
+        rcount: Option<u16>,
+        
+    ) -> Result<usize, crate::Error> {
         use chrono::Local;
         let (ldc, mut i2c) = tokio::join!(self.ldc.lock(), self.i2c.lock());
-        // TODO: 在这里修改一下这个函数，符合你定义的表头
-        Ok(self.rx.send(crate::Record {
-            timestamp: Local::now(),
-            data: ldc
-                .read_data(&mut *i2c, self.channel)
-                .map_err(|e| Error::Ldc1614(e))?,
-            channel: self.channel,
-            mark,
-        })?)
+        let data = ldc.read_data(&mut *i2c, self.channel).map_err(|e| crate::Error::Ldc1614(e))?;
+    
+        // 根据传入的 record_type 创建对应的 RecordA 或 RecordB
+        let record = match record_type {
+            crate::RecordType::A => crate::Record::new_a(data, self.channel, mark),
+            crate::RecordType::B => crate::Record::new_b(
+                data,
+                self.channel,
+                mark,
+                settlecount.unwrap_or(0), // 提供默认值
+                rcount.unwrap_or(0),      // 提供默认值
+            ),
+        };
+    
+        // 发送消息
+        Ok(self.rx.send(record)?)
     }
+
     pub async fn apply_reg_config(&mut self, register: &HashMap<String, u16>) -> Result<()> {
         use ldc1614::{
             bitmap::{

@@ -1,20 +1,21 @@
 //! 包含从ldc1614::Ldc得到对应通道代码的结构。最后的形式是从一个tokio的广播结构发送数据
 
-use super::{Error, Result};
 use std::collections::HashMap;
 use tokio::sync::{self, broadcast};
+
+use crate::handler::a;
 
 pub struct Channel<const ADDR: u8> {
     ldc: std::sync::Arc<sync::Mutex<ldc1614::Ldc<ADDR>>>,
     i2c: std::sync::Arc<sync::Mutex<rppal::i2c::I2c>>,
     channel: ldc1614::Channel,
-    rx: broadcast::Sender<super::Record>,
+    rx: broadcast::Sender<a::Record>,
 }
 
 impl<const ADDR: u8> Channel<ADDR> {
     pub fn from(
         channel: ldc1614::Channel,
-        rx: broadcast::Sender<super::Record>,
+        rx: broadcast::Sender<a::Record>,
         ldc: std::sync::Arc<sync::Mutex<ldc1614::Ldc<ADDR>>>,
         i2c: std::sync::Arc<sync::Mutex<rppal::i2c::I2c>>,
     ) -> Self {
@@ -26,25 +27,27 @@ impl<const ADDR: u8> Channel<ADDR> {
         }
     }
 }
-
+use super::{Error, Result};
 impl<const ADDR: u8> Channel<ADDR> {
-
     pub async fn submit(
         &self,
         mark: Option<std::sync::Arc<str>>,
-        record_type: crate::RecordType,
+        record_type: crate::handler::a::RecordType,
         settlecount: Option<u16>,
         rcount: Option<u16>,
-        
     ) -> Result<usize, crate::Error> {
         use chrono::Local;
         let (ldc, mut i2c) = tokio::join!(self.ldc.lock(), self.i2c.lock());
-        let data = ldc.read_data(&mut *i2c, self.channel).map_err(|e| crate::Error::Ldc1614(e))?;
-    
+        let data = ldc
+            .read_data(&mut *i2c, self.channel)
+            .map_err(|e| crate::Error::Ldc1614(e))?;
+
         // 根据传入的 record_type 创建对应的 RecordA 或 RecordB
         let record = match record_type {
-            crate::RecordType::A => crate::Record::new_a(data, self.channel, mark),
-            crate::RecordType::B => crate::Record::new_b(
+            crate::handler::a::RecordType::A => {
+                crate::handler::a::Record::new_a(data, self.channel, mark)
+            }
+            crate::handler::a::RecordType::B => crate::handler::a::Record::new_b(
                 data,
                 self.channel,
                 mark,
@@ -52,11 +55,10 @@ impl<const ADDR: u8> Channel<ADDR> {
                 rcount.unwrap_or(0),      // 提供默认值
             ),
         };
-    
+
         // 发送消息
         Ok(self.rx.send(record)?)
     }
-
     pub async fn apply_reg_config(&mut self, register: &HashMap<String, u16>) -> Result<()> {
         use ldc1614::{
             bitmap::{

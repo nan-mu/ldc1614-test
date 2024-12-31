@@ -4,7 +4,7 @@ mod channel;
 mod config;
 mod handler;
 mod motor;
-
+use crate::handler::a;
 use clap::Parser;
 use log::{error, info};
 #[derive(Parser, Debug)]
@@ -18,12 +18,6 @@ struct Args {
     #[clap(short, long, default_value = "tasks.yml")]
     config: String,
 }
-
-
-
-
-
-
 
 use rppal::gpio;
 use thiserror::Error;
@@ -45,12 +39,11 @@ pub enum Error {
 }
 
 use tokio::{sync::broadcast, time};
-impl From<broadcast::error::SendError<Record>> for Error {
-    fn from(_value: broadcast::error::SendError<Record>) -> Self {
+impl From<broadcast::error::SendError<handler::a::Record>> for Error {
+    fn from(_value: broadcast::error::SendError<handler::a::Record>) -> Self {
         Error::ProducerJoinError
     }
 }
-
 type Result<T> = core::result::Result<T, Error>;
 
 #[tokio::main]

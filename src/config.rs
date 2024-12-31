@@ -1,7 +1,8 @@
 use std::{collections::HashMap, fmt::Debug, ops::Add};
 
 use crate::Result;
-
+// 在 channel.rs 文件中
+use crate::handler::a::RecordType; // 导入 RecordType
 #[derive(Debug, serde::Deserialize)]
 pub struct Task {
     pub registers: Option<HashMap<String, String>>,

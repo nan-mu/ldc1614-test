@@ -20,72 +20,13 @@ pub struct Handler {
     pub rx: Vec<(Consumer, broadcast::Receiver<super::Record>)>,
 }
 
-use chrono::Local;
-use csv::Writer;
-use std::fs::{metadata, File};
-use std::io::{BufWriter, Write};
-use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
-
-const MAX_FILE_SIZE: u64 = 64 * 1024 * 1024; // 64MB
-
-// 打开或轮转CSV文件的逻辑
-fn open_csv_file(path: Option<String>) -> Result<Arc<Mutex<BufWriter<File>>>, Error> {
-    let file = match path {
-        Some(ref path) => {
-            let file_path = Path::new(path);
-            match file_path.extension() {
-                Some(ext) if ext == std::ffi::OsStr::new("csv") => {
-                    if file_path.exists() {
-                        let metadata = metadata(file_path).map_err(|e| Error::ConfigError)?;
-                        let max_file_size=
-                        if metadata.len() >= MAX_FILE_SIZE {
-                            // 执行轮转
-                            let new_path = format!(
-                                "{}_{}.csv",
-                                file_path.file_stem().unwrap().to_str().unwrap(),
-                                Local::now().format("%Y-%m-%d_%H-%M-%S")
-                            );
-                            File::create(&new_path).map_err(|e| Error::ConfigError)?
-                        } else {
-                            File::options()
-                                .append(true)
-                                .open(file_path)
-                                .map_err(|e| Error::ConfigError)?
-                        }
-                    } else {
-                        File::create(file_path).map_err(|e| Error::ConfigError)?
-                    }
-                }
-                _ => return Err(Error::ConfigError),
-            }
-        }
-        None => {
-            let path = format!("data_{}.csv", Local::now().format("%Y-%m-%d_%H-%M-%S"));
-            File::create(&path).map_err(|e| Error::ConfigError)?
-        }
-    };
-
-    let writer = BufWriter::new(file);
-    Ok(Arc::new(Mutex::new(writer))) // 返回一个共享的 BufWriter
-}
-
 impl Handler {
     pub async fn submit(self) -> Result<()> {
-        // 打开csv文件，确保在所有任务间共享一个文件
-        let csv_writer = open_csv_file(self.path);
-
         for (consumer, mut rx) in self.rx {
             match consumer {
                 Consumer::Csv { path } => {
                     // TODO: 在这里处理逻辑。我建议你先把所有代码直接写在这里，写完后提醒我一下一起来看看哪些需要抽象成模块或者函数。文件的读写比较繁琐，你最好先看完这里已有的代码，经过我的测试能处理文件的大部分场景。
                     debug!("读取csv文件");
-
-                    // 在这里使用共享的csv_writer进行写入
-                    let csv_writer = Arc::clone(&csv_writer);
-
-                    debug!("检查csv文件格式");
-
                     use chrono::Local;
                     let file = match path {
                         Some(path) => match path.extension() {

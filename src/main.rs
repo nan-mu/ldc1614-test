@@ -61,6 +61,41 @@ impl From<broadcast::error::SendError<Record>> for Error {
 
 type Result<T> = core::result::Result<T, Error>;
 
+fn check_and_rotate_file(base_filename: &Path, max_size: u64) -> String {
+    let metadata = match std::fs::metadata(base_filename) {
+        Ok(meta) => meta,
+        Err(_) => {
+            // 如果文件不存在，直接返回基础文件名
+            return base_filename.to_string_lossy().to_string();
+        }
+    };
+
+    // 如果文件存在且大小超过最大限制，进行文件轮转
+    if metadata.len() >= max_size {
+        let mut counter = 1;
+        let mut new_filename = format!(
+            "{}_{}.csv",
+            base_filename.to_string_lossy().trim_end_matches(".csv"),
+            counter
+        );
+
+        // 确保文件不存在
+        while std::path::Path::new(&new_filename).exists() {
+            counter += 1;
+            new_filename = format!(
+                "{}_{}.csv",
+                base_filename.to_string_lossy().trim_end_matches(".csv"),
+                counter
+            );
+        }
+
+        new_filename
+    } else {
+        // 如果文件没有超过大小限制，直接使用原文件名
+        base_filename.to_string_lossy().to_string()
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
@@ -120,11 +155,14 @@ async fn main() -> Result<()> {
     let (tx, _) = broadcast::channel(512);
 
     let mut rx = vec![];
+    let base_filename = csv.path.map(|p| Arc::from(Path::new(&p)));
     if let Some(csv) = config.csv {
         debug!("发现csv配置");
+        let max_size = csv.max_size.unwrap_or(0);
+        let file_to_write = check_and_rotate_file(&path, max_size);
         rx.push((
             Consumer::Csv {
-                path: csv.path.map(|p| Arc::from(Path::new(&p))),
+                path: file_to_write,
             },
             tx.subscribe(),
         ));

@@ -132,7 +132,7 @@ pub fn matlab_type_range<
         };
         let mut result = Vec::new();
         let mut current = start;
-        while current <= end {
+        while current < end {
             result.push(current);
             current = current + step;
         }
@@ -147,11 +147,11 @@ mod tests {
     #[test]
     fn test_yml() {
         use std::path::Path;
-        if !Path::new("/workspaces/tasks/task-5k.yml").exists() {
+        if !Path::new("./tasks/task-5k.yml").exists() {
             panic!("配置文件不存在");
         }
 
-        match Config::read_config("/workspaces/tasks/task-5k.yml") {
+        match Config::read_config("./tasks/task-5k.yml") {
             Ok(config) => {
                 println!("{:?}", config);
                 assert!(config.tasks.len() > 0, "任务列表不能为空");

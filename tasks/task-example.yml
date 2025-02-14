@@ -4,6 +4,10 @@
 csv:
   # path不填写时，会在运行文件夹下创建一个data_<时间>.csv文件
   path: "data.csv"
+  # easy，就是只有位置和数据。
+  # withregister，数据加寄存器
+  # all，位置，数据，时间，寄存器
+  record_type: "easy" 
 
 tasks:
   - registers:

@@ -3,12 +3,13 @@
 use std::collections::HashMap;
 use tokio::sync::{self, broadcast};
 
-use crate::handler::a;
+use crate::handler::a::{self, AllRecord, EasyRecord, RegRecord};
 
 pub struct Channel<const ADDR: u8> {
     ldc: std::sync::Arc<sync::Mutex<ldc1614::Ldc<ADDR>>>,
     i2c: std::sync::Arc<sync::Mutex<rppal::i2c::I2c>>,
     channel: ldc1614::Channel,
+    registers: HashMap<String, u16>,
     rx: broadcast::Sender<a::Record>,
 }
 
@@ -24,36 +25,46 @@ impl<const ADDR: u8> Channel<ADDR> {
             i2c,
             channel,
             rx,
+            registers: HashMap::new(),
         }
     }
 }
-use super::{Error, Result};
+
+use super::Result;
 impl<const ADDR: u8> Channel<ADDR> {
     pub async fn submit(
         &self,
-        mark: Option<std::sync::Arc<str>>,
-        record_type: crate::handler::a::RecordType,
-        settlecount: Option<u16>,
-        rcount: Option<u16>,
-    ) -> Result<usize, crate::Error> {
+        position: f64
+    ) -> Result<usize> {
         use chrono::Local;
         let (ldc, mut i2c) = tokio::join!(self.ldc.lock(), self.i2c.lock());
         let data = ldc
             .read_data(&mut *i2c, self.channel)
             .map_err(|e| crate::Error::Ldc1614(e))?;
+        let date = Local::now();
 
-        // 根据传入的 record_type 创建对应的 RecordA 或 RecordB
-        let record = match record_type {
-            crate::handler::a::RecordType::A => {
-                crate::handler::a::Record::new_a(data, self.channel, mark)
-            }
-            crate::handler::a::RecordType::B => crate::handler::a::Record::new_b(
-                data,
-                self.channel,
-                mark,
-                settlecount.unwrap_or(0), // 提供默认值
-                rcount.unwrap_or(0),      // 提供默认值
-            ),
+        use super::config::RECODE_TYPE;
+        use crate::config::RecordType;
+
+        let record = match RECODE_TYPE.get().unwrap() {
+            RecordType::Easy => a::Record::Easy(EasyRecord{
+                data, 
+                position
+            }),
+            RecordType::WithRegister => a::Record::Reg(RegRecord{
+                data, 
+                position,
+                settlecount: self.registers.get("SETTLECOUNT").copied().unwrap_or(0),
+                rcount: self.registers.get("RCOUNT").copied().unwrap_or(0),
+            }),
+            &RecordType::All => a::Record::All(AllRecord{
+                data, 
+                position,
+                channel: self.channel as u8,
+                settlecount: self.registers.get("SETTLECOUNT").copied().unwrap_or(0),
+                rcount: self.registers.get("RCOUNT").copied().unwrap_or(0),
+                date,
+            }),
         };
 
         // 发送消息

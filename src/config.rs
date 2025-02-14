@@ -1,8 +1,6 @@
-use std::{collections::HashMap, fmt::Debug, ops::Add};
-
+use std::{collections::HashMap, fmt::Debug};
 use crate::Result;
-// 在 channel.rs 文件中
-use crate::handler::a::RecordType; // 导入 RecordType
+
 #[derive(Debug, serde::Deserialize)]
 pub struct Task {
     pub registers: Option<HashMap<String, String>>,
@@ -12,22 +10,26 @@ pub struct Task {
 }
 
 #[derive(Debug, serde::Deserialize)]
-pub struct Redis {
-    pub url: String,
-}
-
-#[derive(Debug, serde::Deserialize)]
 pub struct Csv {
     pub path: Option<String>,
-    pub csv_type: Option<RecordType>,
+    pub record_type: Option<RecordType>,
 }
 
 #[derive(Debug, serde::Deserialize)]
 pub struct Config {
     pub csv: Option<Csv>,
-    pub redis: Option<Redis>,
     pub tasks: Vec<Task>,
 }
+
+#[derive(Debug, serde::Deserialize)]
+pub enum RecordType {
+    Easy,
+    WithRegister,
+    All,
+}
+
+use once_cell::sync::OnceCell;
+pub static RECODE_TYPE: OnceCell<RecordType> = OnceCell::new();
 
 impl Config {
     pub fn read_config(path: &str) -> Result<Config> {
@@ -69,6 +71,7 @@ impl Config {
                         }
                     }
                 });
+
                 Ok(config)
             }
             Err(e) => {
@@ -91,42 +94,49 @@ impl Task {
     }
 
     pub fn position(&self) -> Vec<f64> {
-        let (start, step, end): (f64, f64, f64) = matlab_type_range(&self.location);
-        let mut result = Vec::new();
-        let mut current = start;
-        while current < end {
-            result.push(current);
-            current += step;
-        }
-        result
+        matlab_type_range(&self.location)
     }
 }
 
 pub fn matlab_type_range<
-    T: std::str::FromStr<Err = E> + Copy + Add<Output = T>,
+    T: std::str::FromStr<Err = E> + Copy + std::ops::Add<Output = T> + std::cmp::PartialOrd,
     E: std::fmt::Debug,
 >(
     string: &str,
-) -> (T, T, T) {
-    let parts: Vec<&str> = string.split(':').collect();
-    let start: T = parts[0].parse().unwrap();
+) -> Vec<T> {
+    if string.contains(',') {
+        string
+            .split(',')
+            .map(|s| s.parse().unwrap())
+            .collect()
+    } else {
+        let parts: Vec<&str> = string.split(':').collect();
+        let start: T = parts[0].parse().unwrap();
 
-    match parts.len() {
-        1 => (start, "1".parse().unwrap(), start + "1".parse().unwrap()),
-        2 => (
-            start,
-            "1".parse().unwrap(),
-            parts[1].parse::<T>().unwrap() + "1".parse().unwrap(),
-        ),
-        3 => (
-            start,
-            parts[1].parse().unwrap(),
-            parts[2].parse::<T>().unwrap() + "1".parse().unwrap(),
-        ),
-        _ => {
-            log::error!("无法转换 \"{string}\" 为matlab的范围");
-            panic!()
+        let (start, step, end) = match parts.len() {
+            1 => (start, "1".parse().unwrap(), start + "1".parse().unwrap()),
+            2 => (
+                start,
+                "1".parse().unwrap(),
+                parts[1].parse::<T>().unwrap() + "1".parse().unwrap(),
+            ),
+            3 => (
+                start,
+                parts[1].parse().unwrap(),
+                parts[2].parse::<T>().unwrap() + "1".parse().unwrap(),
+            ),
+            _ => {
+                log::error!("无法转换 \"{string}\" 为matlab的范围");
+                panic!()
+            }
+        };
+        let mut result = Vec::new();
+        let mut current = start;
+        while current <= end {
+            result.push(current);
+            current = current + step;
         }
+        result
     }
 }
 
@@ -153,14 +163,17 @@ mod tests {
     #[test]
     fn test_matlab_type_range_single_value() {
         let input = "1160";
-        let expected_output = (1160, 1, 1161);
-        assert_eq!(matlab_type_range(input), expected_output);
+        let expected_output: Vec<f64> = (1160..1161).map(|x| x as f64).collect();
+        assert_eq!(matlab_type_range(input) as Vec<f64>, expected_output);
         let input = "0:10";
-        let expected_output = (0, 1, 11);
-        assert_eq!(matlab_type_range(input), expected_output);
+        let expected_output: Vec<f64> = (0..11).map(|x| x as f64).collect();
+        assert_eq!(matlab_type_range(input) as Vec<f64>, expected_output);
         let input = "10:2:20";
-        let expected_output = (10, 2, 21);
-        assert_eq!(matlab_type_range(input), expected_output);
+        let expected_output: Vec<f64> = (10..21).step_by(2).map(|x| x as f64).collect();
+        assert_eq!(matlab_type_range(input) as Vec<f64>, expected_output);
+        let input = "1,2,3,4";
+        let expected_output: Vec<f64> = vec![1., 2., 3., 4.];
+        assert_eq!(matlab_type_range(input) as Vec<f64>, expected_output);
     }
 
     #[test]

@@ -4,3 +4,4 @@ Cargo.lock
 temp.patch
 data*
 *.pdf
+*.diff

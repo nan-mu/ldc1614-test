@@ -94,6 +94,10 @@ async fn main() -> Result<()> {
     let pwm = gpio.get(21).unwrap().into_output_low();
     let dir = gpio.get(12).unwrap().into_output_high();
     let mut motor = Motor::new(pwm, dir);
+    match config.drive_mode {
+        Some(drive_mode) => motor.drive_mode = drive_mode,
+        None => {}, // 默认为往复
+    }
     info!("电机初始位置为 {}mm", config.tasks[0].position()[0]);
     motor.set_position(config.tasks[0].position()[0]);
 
@@ -189,8 +193,8 @@ async fn main() -> Result<()> {
                     }
                 }
             }
-            info!("测试任务完成，电机正在归位");
-            motor.goto(-1.0).await.unwrap();
+            info!("测试 {position} 任务完成，电机正在归位");
+            motor.reset().await.unwrap();
         }
     }
 

@@ -14,6 +14,7 @@ csv:
 # * direct: 连续式，不会归零
 # 理论上连续式噪音小一点，适合长时间测量
 drive_mode: "direct"
+display_pb: true
 
 tasks:
   - registers:
@@ -21,7 +22,7 @@ tasks:
       settlecount: "90"
     channel: 2
     count: 50
-    location: "0:50" # 毫米
+    location: "0:10" # 毫米
 
 # 任务列表
 # 以下为支持的测试实例，部分测试在缺省时将自动填充以下值

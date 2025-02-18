@@ -11,12 +11,8 @@ use log::{error, info};
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
-    /// 日志等级
-    #[clap(short, long, default_value = "debug")]
-    log_level: String,
-
     /// 配置文件路径
-    #[clap(short, long, default_value = "tasks.yml")]
+    #[clap(short, long, default_value = "tasks/task-example.yml")]
     config: String,
 }
 
@@ -45,6 +41,15 @@ impl From<broadcast::error::SendError<handler::a::Record>> for Error {
 }
 type Result<T> = core::result::Result<T, Error>;
 
+use indicatif::ProgressStyle;
+use once_cell::sync::Lazy;
+pub static STYLE: Lazy<ProgressStyle> = 
+        Lazy::new(||ProgressStyle::with_template(
+            "[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}",
+        )
+        .unwrap()
+        .progress_chars("#>-"));
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
@@ -52,18 +57,28 @@ async fn main() -> Result<()> {
     // 初始化日志
     use env_logger::Builder;
     use log::debug;
-    use std::str::FromStr;
-    Builder::from_default_env()
-        .filter(
-            None,
-            log::LevelFilter::from_str(&args.log_level.to_uppercase())
-                .unwrap_or(log::LevelFilter::Debug),
-        )
-        .init();
+    let logger = Builder::from_env(env_logger::Env::default().default_filter_or("info")).build();
+    let level = logger.filter();
+    log::set_max_level(level);
 
     debug!("读取配置文件");
     use config::Config;
     let config = Config::read_config(&args.config).unwrap();
+
+    debug!("初始化进度条");
+    use indicatif::{MultiProgress, ProgressBar};
+    // 多进度条初始化结构体，或者有谁有更好的名字？
+    let m = match config.display_pb{ 
+        Some(true) => {
+            let m = MultiProgress::new();
+            use indicatif_log_bridge::LogWrapper;
+            LogWrapper::new(m.clone(), logger)
+                .try_init()
+                .unwrap();
+            Some(m)
+        },
+        _ => None,
+    };
 
     debug!("初始化i2c设备");
     use ldc1614::{bitmap::MANUFCTURER_ID, Ldc};
@@ -98,6 +113,7 @@ async fn main() -> Result<()> {
         Some(drive_mode) => motor.drive_mode = drive_mode,
         None => {}, // 默认为往复
     }
+    motor.m = m.clone(); // 多进度条初始化结构体，或者有谁有更好的名字？
     info!("电机初始位置为 {}mm", config.tasks[0].position()[0]);
     motor.set_position(config.tasks[0].position()[0]);
 
@@ -106,7 +122,6 @@ async fn main() -> Result<()> {
     use std::{path::Path, sync::Arc};
     use tokio::sync::broadcast;
     let (tx, _) = broadcast::channel(512);
-
     let mut rx = vec![];
     if let Some(csv) = config.csv {
         use config::RECODE_TYPE;
@@ -122,12 +137,32 @@ async fn main() -> Result<()> {
             tx.subscribe(),
         ));
     }
-
     handler::Handler { rx }.submit().await.unwrap();
 
+    // 所有测试任务进度
+    let main_pb = match &m{
+        Some(m) => {
+            let pb = m.add(ProgressBar::new(config.tasks.len() as u64));
+                pb.set_style(STYLE.clone());
+                pb.set_message("prosessing");
+            Some(pb)
+        },
+        None => None,
+    };
     debug!("开始进行测试");
     for task in config.tasks {
-        for position in task.position() {
+        let positions = task.position();
+        // 单个任务进度
+        let task_position_pb = match &m{
+            Some(m) => {
+                let pb = m.add(ProgressBar::new(positions.len() as u64));
+                    pb.set_style(STYLE.clone());
+                    pb.set_message("prosessing");
+                Some(pb)
+            },
+            None => None,
+        };
+        for position in positions {
             // 启动电机
             let moter_ok = motor.goto(position);
 
@@ -193,11 +228,16 @@ async fn main() -> Result<()> {
                     }
                 }
             }
-            info!("测试 {position} 任务完成，电机正在归位");
+            if let Some(pb) = &task_position_pb { pb.inc(1);}
             motor.reset().await.unwrap();
         }
+        if let Some(pb) = task_position_pb {pb.finish_with_message("完成");}
+        if let Some(pb) = &main_pb { pb.inc(1);}
     }
-
+    if let Some(pb) = main_pb {pb.finish_with_message("完成");}
+    if let Some(m) = m {
+        m.clear().unwrap();
+    }
     info!("测试任务完成，电机正在归位");
     motor.goto(-1.0).await.unwrap();
     Ok(())

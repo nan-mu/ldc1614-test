@@ -20,6 +20,7 @@ pub struct Config {
     pub csv: Option<Csv>,
     pub tasks: Vec<Task>,
     pub drive_mode: Option<DriveMode>,
+    pub display_pb: Option<bool>,
 }
 
 #[derive(Debug, serde::Deserialize)]

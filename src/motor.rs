@@ -2,11 +2,13 @@ use super::{Result, config::DriveMode};
 
 use log::debug;
 use rppal::gpio;
+use indicatif::MultiProgress;
 pub struct Motor {
     pwm: gpio::OutputPin,
     dir: gpio::OutputPin,
     position: f64,
     pub drive_mode: DriveMode,
+    pub m: Option<MultiProgress>,
 }
 
 impl Motor {
@@ -16,6 +18,7 @@ impl Motor {
             dir,
             drive_mode: DriveMode::Reciprocating, // 默认为往复式
             position: 0.0,
+            m: None,
         }
     }
 
@@ -44,6 +47,17 @@ impl Motor {
     /// ENA+接使能信号，DIR+接方向信号物理口32，PUL+接脉冲信号物理口40
     /// * distance 电机运动距离（正数为正向移动）
     async fn moving(&mut self, distance: f64) -> Result<()> {
+        // 进度条
+        let pb = match self.m { // 向上取整
+            Some(ref mut m) => {
+                let pb = m.add(indicatif::ProgressBar::new(distance.abs().ceil() as u64));
+                    pb.set_style(crate::STYLE.clone());
+                    pb.set_message("moving");
+            Some(pb)
+            },
+            None => None,
+        };
+
         use tokio::time::{self, Duration};
         // 电机运动速度 (mm/s)= 脉冲频率 * 丝杆导程 * 电机旋转步长 / (编码器细分度 * 360°)
         // > 滑轨每转的距离是1.0mm，步进电机在没有细分的情况下，电机每步进一次时的角度为1.8°
@@ -59,8 +73,18 @@ impl Motor {
                 self.dir.set_low();
             }
         }
-        // 异步等待滑轨前进指定距离
-        time::sleep(Duration::from_secs_f64(distance.abs() / SPEED)).await;
+
+        match pb {// 异步等待滑轨前进指定距离
+            Some(pb) => {
+                for _ in 0..distance.abs().ceil() as u64 {
+                    time::sleep(Duration::from_secs_f64(1.0 / SPEED)).await;
+                    pb.inc(1);
+                }
+                pb.finish_and_clear();
+            },
+            None => {time::sleep(Duration::from_secs_f64(distance.abs() / SPEED)).await;}
+        }
+
         // 停止 PWM 输出
         self.pwm.clear_pwm()?;
         Ok(())

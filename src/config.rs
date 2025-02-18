@@ -19,9 +19,18 @@ pub struct Csv {
 pub struct Config {
     pub csv: Option<Csv>,
     pub tasks: Vec<Task>,
+    pub drive_mode: Option<DriveMode>,
 }
 
 #[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum DriveMode {
+    Reciprocating,
+    Direct,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum RecordType {
     Easy,
     WithRegister,

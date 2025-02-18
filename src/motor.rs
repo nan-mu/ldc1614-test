@@ -1,4 +1,4 @@
-use super::Result;
+use super::{Result, config::DriveMode};
 
 use log::debug;
 use rppal::gpio;
@@ -6,6 +6,7 @@ pub struct Motor {
     pwm: gpio::OutputPin,
     dir: gpio::OutputPin,
     position: f64,
+    pub drive_mode: DriveMode,
 }
 
 impl Motor {
@@ -13,6 +14,7 @@ impl Motor {
         Motor {
             pwm,
             dir,
+            drive_mode: DriveMode::Reciprocating, // 默认为往复式
             position: 0.0,
         }
     }
@@ -21,6 +23,18 @@ impl Motor {
         debug!("电机从 {}mm 移动到 {}mm", self.position, target);
         self.moving(target - self.position).await?;
         self.position = target;
+        Ok(())
+    }
+
+    pub async fn reset(&mut self) -> Result<()> {
+        debug!("电机归零");
+        match self.drive_mode {
+            DriveMode::Reciprocating => {
+                self.goto(0.0).await?;
+            }
+            DriveMode::Direct => {
+            }
+        }
         Ok(())
     }
 

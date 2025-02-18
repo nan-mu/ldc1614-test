@@ -56,17 +56,21 @@ impl Motor {
         self.position = position;
     }
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[tokio::test]
+    #[should_panic]
+    async fn test_goto() {
+        let gpio = gpio::Gpio::new().unwrap();
+        let pwm_pin = gpio.get(21).unwrap().into_output();
+        let dir_pin = gpio.get(12).unwrap().into_output();
+        let mut motor = Motor::new(pwm_pin, dir_pin);
 
-#[tokio::test]
-async fn test_goto() {
-    let gpio = gpio::Gpio::new().unwrap();
-    let pwm_pin = gpio.get(21).unwrap().into_output();
-    let dir_pin = gpio.get(12).unwrap().into_output();
-    let mut motor = Motor::new(pwm_pin, dir_pin);
+        motor.goto(15.0).await.unwrap();
+        assert_eq!(motor.position, 15.0);
 
-    motor.goto(15.0).await.unwrap();
-    assert_eq!(motor.position, 15.0);
-
-    motor.goto(0.0).await.unwrap();
-    assert_eq!(motor.position, 0.0);
+        motor.goto(0.0).await.unwrap();
+        assert_eq!(motor.position, 0.0);
+    }
 }

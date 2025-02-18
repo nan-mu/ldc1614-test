@@ -1,20 +1,22 @@
 //! 包含从ldc1614::Ldc得到对应通道代码的结构。最后的形式是从一个tokio的广播结构发送数据
 
-use super::{Error, Result};
 use std::collections::HashMap;
 use tokio::sync::{self, broadcast};
+
+use crate::handler::a::{self, AllRecord, EasyRecord, RegRecord};
 
 pub struct Channel<const ADDR: u8> {
     ldc: std::sync::Arc<sync::Mutex<ldc1614::Ldc<ADDR>>>,
     i2c: std::sync::Arc<sync::Mutex<rppal::i2c::I2c>>,
     channel: ldc1614::Channel,
-    rx: broadcast::Sender<super::Record>,
+    registers: HashMap<String, u16>,
+    rx: broadcast::Sender<a::Record>,
 }
 
 impl<const ADDR: u8> Channel<ADDR> {
     pub fn from(
         channel: ldc1614::Channel,
-        rx: broadcast::Sender<super::Record>,
+        rx: broadcast::Sender<a::Record>,
         ldc: std::sync::Arc<sync::Mutex<ldc1614::Ldc<ADDR>>>,
         i2c: std::sync::Arc<sync::Mutex<rppal::i2c::I2c>>,
     ) -> Self {
@@ -23,22 +25,50 @@ impl<const ADDR: u8> Channel<ADDR> {
             i2c,
             channel,
             rx,
+            registers: HashMap::new(),
         }
     }
 }
 
+use super::Result;
 impl<const ADDR: u8> Channel<ADDR> {
-    pub async fn submit(&self, mark: Option<std::sync::Arc<str>>) -> Result<usize> {
+    pub async fn submit(
+        &self,
+        position: f64
+    ) -> Result<usize> {
         use chrono::Local;
         let (ldc, mut i2c) = tokio::join!(self.ldc.lock(), self.i2c.lock());
-        Ok(self.rx.send(crate::Record {
-            timestamp: Local::now(),
-            data: ldc
-                .read_data(&mut *i2c, self.channel)
-                .map_err(|e| Error::Ldc1614(e))?,
-            channel: self.channel,
-            mark,
-        })?)
+        let data = ldc
+            .read_data(&mut *i2c, self.channel)
+            .map_err(|e| crate::Error::Ldc1614(e))?;
+        let date = Local::now();
+
+        use super::config::RECODE_TYPE;
+        use crate::config::RecordType;
+
+        let record = match RECODE_TYPE.get().unwrap() {
+            RecordType::Easy => a::Record::Easy(EasyRecord{
+                data, 
+                position
+            }),
+            RecordType::WithRegister => a::Record::Reg(RegRecord{
+                data, 
+                position,
+                settlecount: self.registers.get("SETTLECOUNT").copied().unwrap_or(0),
+                rcount: self.registers.get("RCOUNT").copied().unwrap_or(0),
+            }),
+            &RecordType::All => a::Record::All(AllRecord{
+                data, 
+                position,
+                channel: self.channel as u8,
+                settlecount: self.registers.get("SETTLECOUNT").copied().unwrap_or(0),
+                rcount: self.registers.get("RCOUNT").copied().unwrap_or(0),
+                date,
+            }),
+        };
+
+        // 发送消息
+        Ok(self.rx.send(record)?)
     }
     pub async fn apply_reg_config(&mut self, register: &HashMap<String, u16>) -> Result<()> {
         use ldc1614::{

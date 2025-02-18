@@ -7,6 +7,7 @@ mod motor;
 
 use clap::Parser;
 use log::{error, info};
+
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
@@ -17,20 +18,6 @@ struct Args {
     /// 配置文件路径
     #[clap(short, long, default_value = "tasks.yml")]
     config: String,
-}
-
-use std::{sync, time::Duration};
-
-#[derive(Debug, Clone)]
-struct Record {
-    /// 时间戳
-    timestamp: chrono::DateTime<chrono::Local>,
-    /// 数据
-    data: u32,
-    /// 通道
-    channel: ldc1614::Channel,
-    /// 可选的标记
-    mark: Option<sync::Arc<str>>,
 }
 
 use rppal::gpio;
@@ -48,17 +35,14 @@ pub enum Error {
     ProducerJoinError,
     #[error("配置文件填写错误")]
     ConfigError,
-    #[error("数据库错误: {0}")]
-    Database(#[from] fred::error::RedisError),
 }
 
 use tokio::{sync::broadcast, time};
-impl From<broadcast::error::SendError<Record>> for Error {
-    fn from(_value: broadcast::error::SendError<Record>) -> Self {
+impl From<broadcast::error::SendError<handler::a::Record>> for Error {
+    fn from(_value: broadcast::error::SendError<handler::a::Record>) -> Self {
         Error::ProducerJoinError
     }
 }
-
 type Result<T> = core::result::Result<T, Error>;
 
 #[tokio::main]
@@ -121,20 +105,15 @@ async fn main() -> Result<()> {
 
     let mut rx = vec![];
     if let Some(csv) = config.csv {
+        use config::RECODE_TYPE;
         debug!("发现csv配置");
+        match csv.record_type {
+            Some(record_type) => RECODE_TYPE.set(record_type).unwrap(),
+            None => RECODE_TYPE.set(config::RecordType::Easy).unwrap(),
+        }
         rx.push((
             Consumer::Csv {
                 path: csv.path.map(|p| Arc::from(Path::new(&p))),
-            },
-            tx.subscribe(),
-        ));
-    }
-
-    if let Some(redis) = config.redis {
-        debug!("发现redis配置");
-        rx.push((
-            Consumer::Redis {
-                url: redis.url.into(),
             },
             tx.subscribe(),
         ));
@@ -144,9 +123,9 @@ async fn main() -> Result<()> {
 
     debug!("开始进行测试");
     for task in config.tasks {
-        for postion in task.position() {
+        for position in task.position() {
             // 启动电机
-            let moter_ok = motor.goto(postion);
+            let moter_ok = motor.goto(position);
 
             let mut channel =
                 channel::Channel::from(task.channel(), tx.clone(), ldc.clone(), i2c.clone());
@@ -189,9 +168,7 @@ async fn main() -> Result<()> {
 
             // 字符串转range
             let settlecount = config::matlab_type_range::<u16, _>(&settlecount);
-            let settlecount = (settlecount.0..settlecount.2).step_by(settlecount.1 as usize);
-            let rcount = config::matlab_type_range::<u16, _>(&rcount);
-            let rcount_range = (rcount.0..rcount.2).step_by(rcount.1 as usize);
+            let rcount_range = config::matlab_type_range::<u16, _>(&rcount);
 
             // 等到电机就位
             moter_ok.await.unwrap();
@@ -202,14 +179,12 @@ async fn main() -> Result<()> {
                 for rcount in rcount_range.clone() {
                     let _ = (&mut register).insert("RCOUNT".to_string(), rcount);
                     channel.apply_reg_config(&register).await.unwrap();
-                    let mark: Arc<str> = Arc::from(format!(
-                        "postion:{postion},settlecount:{settlecount},rcount:{rcount}"
-                    ));
                     for times in 0..task.count {
+                        use tokio::time::Duration;
                         time::sleep(Duration::from_millis((settlecount / 10) as u64)).await;
-                        match channel.submit(Some(mark.clone())).await {
+                        match channel.submit(position).await {
                             Ok(_) => debug!("测量成功"),
-                            Err(e) => error!("postion:{postion},settlecount:{settlecount},rcount:{rcount}，测量第 {} 次失败: {:?}", times, e),
+                            Err(e) => error!("postion:{position},settlecount:{settlecount},rcount:{rcount}，测量第 {} 次失败: {:?}", times, e),
                         };
                     }
                 }

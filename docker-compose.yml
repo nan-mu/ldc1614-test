@@ -1,6 +1,9 @@
 services:
   dev-container:
     # TODO: 等服务器到货后搭建一个校园网内的docker镜像源不使用dockerhub
+    container_name: devcontainer_${USERNAME}
+    environment:
+      - USER=${USERNAME}
     image: nanmu111/ldc1614-test-dev-container:latest
     # build:
     #   context: .

@@ -18,12 +18,12 @@ rsync -avz --exclude-from=.gitignore --exclude=./.git ./* zxrpi:~/ldc1614-test/
 cargo run -- -c tasks/<配置文件名称>.yml
 ```
 
-更推荐使用screen在ssh断开后测试任务不会中断。
+更推荐使用screen在ssh断开后测试任务不会中断。**重要！**: 在开始使用之前，请使用`screen -ls`查看是否有别人正在使用。
 
 ```shell
 # 创建会话并运行
 screen -dmS <测试会话名称> cargo run -- -c tasks/<配置文件名称>.yml
 
-# 连接已经创建的会话
+# 连接已经创建的会话，连接会话后使用Ctrl+A D退出
 screen -r <测试会话名称>
 ```

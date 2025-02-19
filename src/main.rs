@@ -144,7 +144,7 @@ async fn main() -> Result<()> {
         Some(m) => {
             let pb = m.add(ProgressBar::new(config.tasks.len() as u64));
                 pb.set_style(STYLE.clone());
-                pb.set_message("prosessing");
+                pb.set_message("测试任务进行中");
             Some(pb)
         },
         None => None,
@@ -157,7 +157,7 @@ async fn main() -> Result<()> {
             Some(m) => {
                 let pb = m.add(ProgressBar::new(positions.len() as u64));
                     pb.set_style(STYLE.clone());
-                    pb.set_message("prosessing");
+                    pb.set_message("测量中");
                 Some(pb)
             },
             None => None,
@@ -231,10 +231,10 @@ async fn main() -> Result<()> {
             if let Some(pb) = &task_position_pb { pb.inc(1);}
             motor.reset().await.unwrap();
         }
-        if let Some(pb) = task_position_pb {pb.finish_with_message("完成");}
+        if let Some(pb) = task_position_pb {pb.finish_with_message(format!("完成任务:\n{} ", task.to_yaml_string()));}
         if let Some(pb) = &main_pb { pb.inc(1);}
     }
-    if let Some(pb) = main_pb {pb.finish_with_message("完成");}
+    if let Some(pb) = main_pb {pb.finish_with_message("所有任务完成完成");}
     if let Some(m) = m {
         m.clear().unwrap();
     }

@@ -52,7 +52,7 @@ impl Motor {
             Some(ref mut m) => {
                 let pb = m.add(indicatif::ProgressBar::new(distance.abs().ceil() as u64));
                     pb.set_style(crate::STYLE.clone());
-                    pb.set_message("moving");
+                    pb.set_message("电机移动中");
             Some(pb)
             },
             None => None,

@@ -98,7 +98,7 @@ impl Handler {
                         let mut lines = reader.lines();
                         if let Some(Ok(first_line)) = lines.next() {
                             if first_line.trim() != "timestamp,data,mark" {
-                                error!("错误的csv文件格式，将在文件末尾追加新内容");
+                                error!("目标csv文件非空，将在文件末尾追加新内容");
                             }
                             let wtr = Writer::from_writer(file);
                             wtr

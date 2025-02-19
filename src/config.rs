@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt::Debug};
 use crate::Result;
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct Task {
     pub registers: Option<HashMap<String, String>>,
     channel: u8,
@@ -93,6 +93,10 @@ impl Config {
 }
 
 impl Task {
+    pub fn to_yaml_string(&self) -> String {
+        serde_yaml::to_string(self).unwrap()
+    }
+
     pub fn channel(&self) -> ldc1614::Channel {
         match self.channel {
             0 => ldc1614::Channel::Zero,
